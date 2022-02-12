@@ -1,0 +1,18 @@
+[package]
+name = "quartz"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+ogg-sys = "0.0.9"
+audiopus = "0.3.0-rc.0"
+rocket = "0.5.0-rc.1"
+tokio = "1.16.1"
+async-stream = "0.3.2"
+spin_sleep = "1.0.0"
+thiserror = "1.0.30"
+byteorder = "1.4.3"
+bytes = "1.1.0"
+
+[dev-dependencies]
+hound = "3.4.0"

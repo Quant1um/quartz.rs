@@ -69,7 +69,7 @@ impl OpusEncoder {
     }
 
     pub fn samples_per_page(&self) -> u64 {
-        self.frame_buffer.len() as u64
+        (self.frame_buffer.len() / self.channels as usize) as u64
     }
 
     pub fn sample_rate(&self) -> u32 {

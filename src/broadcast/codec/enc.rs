@@ -3,6 +3,12 @@ use std::ops::Deref;
 use std::time::Duration;
 use bytes::Bytes;
 
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+pub struct Page {
+    pub data: Bytes,
+    pub duration: Duration
+}
+
 pub type InitError = opus::InitError;
 pub type EncodeError<S> = opus::EncodeError<S>;
 
@@ -29,7 +35,7 @@ impl Encoder {
         &self.header
     }
 
-    pub fn pull<S: AudioSource>(&mut self, source: &mut S) -> Result<(Bytes, Duration), EncodeError<S>> {
+    pub fn pull<S: AudioSource>(&mut self, source: &mut S) -> Result<Page, EncodeError<S>> {
         let mut samples = 0;
         let spp = self.opus.samples_per_page();
         let usps = 1_000_000_000u64 / (self.opus.sample_rate() as u64);
@@ -42,10 +48,10 @@ impl Encoder {
             let result = self.ogg.take();
 
             if !result.is_empty() {
-                return Ok((
-                    Bytes::copy_from_slice(result.deref()),
-                    Duration::from_nanos(samples * usps)
-                ))
+                return Ok(Page {
+                    data: Bytes::copy_from_slice(result.deref()),
+                    duration: Duration::from_nanos(samples * usps)
+                })
             }
         }
     }

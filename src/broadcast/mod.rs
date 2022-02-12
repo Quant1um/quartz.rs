@@ -1,5 +1,6 @@
 mod pump;
 mod codec;
+mod buffer;
 
 pub use codec::{
     Options,
@@ -35,18 +36,23 @@ impl Broadcast {
 use rocket::{response, Request};
 use rocket::response::stream::ReaderStream;
 use rocket::futures::StreamExt;
+use rocket::http::*;
 
 impl<'r> response::Responder<'r, 'r> for Broadcast
 {
     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
-        use rocket::http::*;
-
         let mut handle = self.0;
+
         let stream = async_stream::stream! {
             yield handle.header();
 
+            for page in handle.buffered() {
+                println!("send buffered {:?}", page.duration);
+                yield page.data;
+            }
+
             loop {
-                yield handle.poll().await;
+                yield handle.poll().await.data;
             }
         };
 

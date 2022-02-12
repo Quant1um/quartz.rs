@@ -1,68 +1,48 @@
-use tokio::sync::watch;
-use tokio::time::Instant;
+use std::time::Instant;
 use bytes::Bytes;
-
-use super::codec::{Encoder, InitError, EncodeError};
+use super::codec::{Page, Encoder, InitError, EncodeError};
 use super::{Options, AudioSource};
+use super::buffer::{Buffer, Receiver};
 
 #[derive(Clone)]
 pub struct PumpHandle {
-    receiver: watch::Receiver<Bytes>,
+    receiver: Receiver,
     header: Bytes
 }
 
 impl PumpHandle {
 
-    pub async fn poll(&mut self) -> Bytes {
-        let _ = self.receiver.changed().await;
-        self.receiver.borrow_and_update().clone()
+    pub fn buffered(&mut self) -> Vec<Page> {
+        self.receiver.buffered()
+    }
+
+    pub async fn poll(&mut self) -> Page {
+        self.receiver.poll().await
     }
 
     pub fn header(&self) -> Bytes {
         self.header.clone()
     }
-
-    /*
-    pub fn stream(mut self) -> impl Stream<Item=Bytes> {
-        async_stream::stream! {
-            use std::ops::Deref;
-
-            let mut ogg = OggStream::new();
-
-            ogg.put(self.header.header().deref(), 0);
-            ogg.flush();
-            ogg.put(self.header.tags().deref(), 0);
-            ogg.flush();
-            yield Bytes::copy_from_slice(ogg.take().deref());
-
-            for _ in (0..20) {
-                for _ in 0..self.fpp {
-                    ogg.put(&self.poll().await.deref(), 1920);
-                }
-
-                ogg.flush();
-                yield Bytes::copy_from_slice(ogg.take().deref());
-            }
-        }
-    }*/
 }
 
 pub struct Pump {
     encoder: Encoder,
-    sender: watch::Sender<Bytes>,
+    buffer: Buffer,
     next_pull: Instant
 }
 
 impl Pump {
 
     pub fn new(options: Options) -> Result<(Self, PumpHandle), InitError> {
-        let (sender, receiver) = watch::channel(Bytes::new());
+        let (buffer, receiver) = Buffer::new(options.buffer_size);
 
         let encoder = Encoder::new(&options)?;
         let header = encoder.header().clone();
 
         Ok((Self {
-            sender, encoder, next_pull: Instant::now()
+            buffer,
+            encoder,
+            next_pull: Instant::now()
         }, PumpHandle {
             receiver,
             header
@@ -78,9 +58,12 @@ impl Pump {
     }
 
     fn encode<S: AudioSource>(&mut self, source: &mut S) -> Result<bool, EncodeError<S>> {
-        let (bytes, time) = self.encoder.pull(source)?;
-        self.next_pull += time;
-        Ok(self.sender.send(bytes).is_ok())
+        let page = self.encoder.pull(source)?;
+
+        self.next_pull += page.duration;
+        self.buffer.push(page);
+
+        Ok(self.buffer.receivers() > 0)
     }
 
     fn wait_for_next_frame(&mut self) {

@@ -3,7 +3,9 @@ mod ogg;
 mod enc;
 
 pub use enc::*;
+
 use super::AudioSource;
+use std::time::Duration;
 
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Debug, Hash)]
 pub enum FrameSize {
@@ -68,6 +70,7 @@ pub struct Options {
     pub signal: Signal,
     pub bandwidth: Bandwidth,
     pub application: Application,
+    pub buffer_size: Duration,
     pub complexity: u8,
     pub frames_per_page: u32,
     pub vbr: bool

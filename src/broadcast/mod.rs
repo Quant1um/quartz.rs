@@ -1,6 +1,5 @@
 mod pump;
 mod codec;
-mod test;
 
 pub use codec::{
     Options,
@@ -12,7 +11,7 @@ pub use codec::{
     Channels,
     FrameSize,
 
-    opus::InitError
+    InitError
 };
 
 pub trait AudioSource {
@@ -42,7 +41,14 @@ impl<'r> response::Responder<'r, 'r> for Broadcast
     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
         use rocket::http::*;
 
-        let stream = self.0.stream();
+        let mut handle = self.0;
+        let stream = async_stream::stream! {
+            yield handle.header();
+
+            loop {
+                yield handle.poll().await;
+            }
+        };
 
         response::Response::build()
             .header(ContentType::new("audio", "ogg"))

@@ -8,16 +8,19 @@ extern crate rocket;
 use rocket::{Rocket, Build, State, Request, Response};
 use rocket::fairing::AdHoc;
 use std::ops::Deref;
+use std::time::Duration;
 
-pub struct Tinnitus(f32);
+pub struct Tinnitus(Duration);
 
 impl broadcast::AudioSource for Tinnitus {
     type Error = ();
 
     fn pull(&mut self, samples: &mut [f32]) -> Result<(), Self::Error> {
+        let dps = Duration::from_nanos(1_000_000_000u64 / 48000);
+
         for s in samples {
-            self.0 += 1.0 / 48000.0;
-            *s = f32::sin(self.0 * 2.0 * std::f32::consts::PI * 1000.0) * 0.2;
+            self.0 += dps;
+            *s = f32::sin(self.0.as_secs_f32() * 2.0 * std::f32::consts::PI * 1000.0) * 0.2;
         }
 
         Ok(())
@@ -36,9 +39,9 @@ fn tinnitus(broadcast: &State<broadcast::Broadcast>) -> broadcast::Broadcast {
 
 #[launch]
 fn rocket() -> Rocket<Build> {
-    let b = broadcast::Broadcast::new(Tinnitus(0.0), broadcast::Options {
+    let b = broadcast::Broadcast::new(Tinnitus(Duration::from_nanos(0)), broadcast::Options {
         sample_rate: broadcast::SampleRate::Hz48000,
-        frame_size: broadcast::FrameSize::Ms40,
+        frame_size: broadcast::FrameSize::Ms60,
         bit_rate: broadcast::Bitrate::Max,
         channels: broadcast::Channels::Mono,
         signal: broadcast::Signal::Music,

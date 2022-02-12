@@ -1,26 +1,28 @@
 use tokio::sync::watch;
-use tokio::time::{Duration, Instant};
-use rocket::futures::Stream;
+use tokio::time::Instant;
 use bytes::Bytes;
 
-use super::codec::ogg::OggStream;
-use super::codec::opus::{OpusEncoder, OpusHeader, EncodeError};
-use super::{Options, InitError, AudioSource};
+use super::codec::{Encoder, InitError, EncodeError};
+use super::{Options, AudioSource};
 
 #[derive(Clone)]
 pub struct PumpHandle {
     receiver: watch::Receiver<Bytes>,
-    header: OpusHeader,
-    fpp: u32
+    header: Bytes
 }
 
 impl PumpHandle {
 
-    async fn poll(&mut self) -> Bytes {
+    pub async fn poll(&mut self) -> Bytes {
         let _ = self.receiver.changed().await;
         self.receiver.borrow_and_update().clone()
     }
 
+    pub fn header(&self) -> Bytes {
+        self.header.clone()
+    }
+
+    /*
     pub fn stream(mut self) -> impl Stream<Item=Bytes> {
         async_stream::stream! {
             use std::ops::Deref;
@@ -42,14 +44,13 @@ impl PumpHandle {
                 yield Bytes::copy_from_slice(ogg.take().deref());
             }
         }
-    }
+    }*/
 }
 
 pub struct Pump {
-    encoder: OpusEncoder,
+    encoder: Encoder,
     sender: watch::Sender<Bytes>,
-    interval: Duration,
-    last_frame: Instant
+    next_pull: Instant
 }
 
 impl Pump {
@@ -57,17 +58,14 @@ impl Pump {
     pub fn new(options: Options) -> Result<(Self, PumpHandle), InitError> {
         let (sender, receiver) = watch::channel(Bytes::new());
 
-        let interval = options.frame_size.as_duration();
-        let encoder = OpusEncoder::new(&options)?;
+        let encoder = Encoder::new(&options)?;
         let header = encoder.header().clone();
 
         Ok((Self {
-            sender, encoder, interval,
-            last_frame: Instant::now() - interval
+            sender, encoder, next_pull: Instant::now()
         }, PumpHandle {
             receiver,
-            header,
-            fpp: options.frames_per_page
+            header
         }))
     }
 
@@ -80,15 +78,14 @@ impl Pump {
     }
 
     fn encode<S: AudioSource>(&mut self, source: &mut S) -> Result<bool, EncodeError<S>> {
-        let data = self.encoder.pull_page(source)?;
-        Ok(self.sender.send(data).is_ok())
+        let (bytes, time) = self.encoder.pull(source)?;
+        self.next_pull += time;
+        Ok(self.sender.send(bytes).is_ok())
     }
 
     fn wait_for_next_frame(&mut self) {
-        if let Some(sleep) = self.interval.checked_sub(self.last_frame.elapsed()) {
+        if let Some(sleep) = self.next_pull.checked_duration_since(Instant::now()) {
             spin_sleep::sleep(sleep);
         }
-
-        self.last_frame += self.interval;
     }
 }

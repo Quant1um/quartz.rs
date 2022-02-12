@@ -1,8 +1,8 @@
-use std::time::Duration;
+mod opus;
+mod ogg;
+mod enc;
 
-pub mod opus;
-pub mod ogg;
-
+pub use enc::*;
 use super::AudioSource;
 
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Debug, Hash)]
@@ -16,17 +16,6 @@ pub enum FrameSize {
 }
 
 impl FrameSize {
-    pub fn as_duration(&self) -> Duration {
-        match self {
-            FrameSize::Ms2Half => Duration::from_micros(2500),
-            FrameSize::Ms5 => Duration::from_millis(5),
-            FrameSize::Ms10 => Duration::from_millis(10),
-            FrameSize::Ms20 => Duration::from_millis(20),
-            FrameSize::Ms40 => Duration::from_millis(40),
-            FrameSize::Ms60 => Duration::from_millis(60),
-        }
-    }
-
     pub fn as_sample_count(&self, rate: SampleRate) -> usize {
         let rate = (rate as i32) as usize;
 

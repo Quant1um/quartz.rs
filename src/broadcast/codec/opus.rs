@@ -1,6 +1,6 @@
 use audiopus;
 use thiserror::Error;
-use bytes::Bytes;
+use std::io::{self, Write};
 use super::{AudioSource, Options};
 
 #[derive(Error, Clone, Copy, Eq, PartialEq, Debug, Hash)]
@@ -40,9 +40,10 @@ impl From<audiopus::Error> for InitError {
 
 pub struct OpusEncoder {
     opus: audiopus::coder::Encoder,
-    header: OpusHeader,
     frame_buffer: Vec<f32>,
-    byte_buffer: Vec<u8>
+    byte_buffer: Vec<u8>,
+    channels: u8,
+    sample_rate: u32
 }
 
 const BUFFER_SIZE: usize = 4000;
@@ -57,20 +58,51 @@ impl OpusEncoder {
         opus.set_complexity(options.complexity)?;
 
         let frame_size = options.frame_size.as_sample_count(options.sample_rate) * options.channels.count();
-        let header = OpusHeader::emit(
-            options.channels.count() as u8,
-            options.sample_rate as u32);
 
         Ok(Self {
             opus,
-            header,
+            channels: options.channels.count() as u8,
+            sample_rate: options.sample_rate as u32,
             frame_buffer: vec![0.0; frame_size],
             byte_buffer: vec![0u8; BUFFER_SIZE]
         })
     }
 
-    pub fn header(&self) -> &OpusHeader {
-        &self.header
+    pub fn samples_per_page(&self) -> u64 {
+        self.frame_buffer.len() as u64
+    }
+
+    pub fn sample_rate(&self) -> u32 {
+        self.sample_rate
+    }
+
+    pub fn write_header<W: Write>(&self, mut write: W) -> io::Result<()> {
+        write.write(b"OpusHead")?;                      // magic
+        write.write(&[1])?;                             // opus version
+        write.write(&[self.channels])?;                 // channels
+        write.write(&[0x38, 0x01])?;                    // pre skip
+        write.write(&self.sample_rate.to_le_bytes())?;  // sample rate
+        write.write(&[0, 0, 0])?;                       // bruyh
+
+        Ok(())
+    }
+
+    pub fn write_tags<W: Write>(&self, mut write: W) -> io::Result<()> {
+        let vendor = format!("quartz {}", std::env!("CARGO_PKG_VERSION"));
+        let comments = [format!("encoder={} libopus", vendor)];
+
+        write.write(b"OpusTags")?;
+        write.write(&(vendor.len() as u32).to_le_bytes())?;
+        write.write(vendor.as_bytes())?;
+
+        write.write(&(comments.len() as u32).to_le_bytes())?;
+
+        for com in comments {
+            write.write(&(com.len() as u32).to_le_bytes())?;
+            write.write(com.as_bytes())?;
+        }
+
+        Ok(())
     }
 
     pub fn pull_page<S: AudioSource>(&mut self, source: &mut S) -> Result<&[u8], EncodeError<S>> {
@@ -81,59 +113,4 @@ impl OpusEncoder {
         let bytes = self.opus.encode_float(&self.frame_buffer, &mut self.byte_buffer)?;
         Ok(&self.byte_buffer[..bytes])
     }
-}
-
-#[derive(Clone)]
-pub struct OpusHeader {
-    header: Bytes,
-    tags: Bytes
-}
-
-impl OpusHeader {
-    pub fn emit(channels: u8, sample_rate: u32) -> Self {
-        Self {
-            header: gen_header(channels, sample_rate),
-            tags: gen_tags()
-        }
-    }
-
-    pub fn header(&self) -> &Bytes {
-        &self.header
-    }
-
-    pub fn tags(&self) -> &Bytes {
-        &self.tags
-    }
-}
-
-fn gen_header(channels: u8, sample_rate: u32) -> Bytes {
-    let mut buf = Vec::with_capacity(19);
-
-    buf.extend(b"OpusHead");                 // magic
-    buf.extend(&[1]);                        // opus version
-    buf.extend(&[channels]);                 // channels
-    buf.extend(&[0x38, 0x01]);               // pre skip
-    buf.extend(&sample_rate.to_le_bytes());  // sample rate
-    buf.extend(&[0, 0, 0]);                  // bruyh
-
-    Bytes::from(buf)
-}
-
-fn gen_tags() -> Bytes {
-    let mut buf = Vec::with_capacity(30);
-    let vendor = format!("quartz {}", std::env!("CARGO_PKG_VERSION"));
-    let comments = [format!("encoder={} libopus", vendor)];
-
-    buf.extend(b"OpusTags");
-    buf.extend(&(vendor.len() as u32).to_le_bytes());
-    buf.extend(vendor.as_bytes());
-
-    buf.extend(&(comments.len() as u32).to_le_bytes());
-
-    for com in comments {
-        buf.extend(&(com.len() as u32).to_le_bytes());
-        buf.extend(com.as_bytes());
-    }
-
-    Bytes::from(buf)
 }

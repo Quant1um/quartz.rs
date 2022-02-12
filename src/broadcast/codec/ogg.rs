@@ -10,7 +10,7 @@ use ogg_sys::{
     ogg_stream_pageout
 };
 
-const STREAM_ID: i32 = 390480923; //cool id
+const STREAM_ID: i32 = 888765668; //cool id
 
 pub struct OggStream {
     ogg: *mut ogg_stream_state,
@@ -57,6 +57,8 @@ impl OggStream {
 
     pub fn put(&mut self, data: &[u8], samples: u64) {
         unsafe {
+            self.samples = self.samples.wrapping_add(samples as i64);
+
             let mut packet = ogg_packet {
                 packet: data.as_ptr() as *mut u8,
                 bytes: data.len() as i32,
@@ -67,7 +69,6 @@ impl OggStream {
             };
 
             self.counter = self.counter.wrapping_add(1);
-            self.samples = self.samples.wrapping_add(samples as i64);
 
             ogg_stream_packetin(self.ogg, (&mut packet) as *mut _);
         }

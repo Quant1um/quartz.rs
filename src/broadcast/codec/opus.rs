@@ -73,13 +73,13 @@ impl OpusEncoder {
         &self.header
     }
 
-    pub fn pull_page<S: AudioSource>(&mut self, source: &mut S) -> Result<Bytes, EncodeError<S>> {
+    pub fn pull_page<S: AudioSource>(&mut self, source: &mut S) -> Result<&[u8], EncodeError<S>> {
         if let Err(e) = source.pull(&mut self.frame_buffer) {
             return Err(EncodeError::Source(e));
         }
 
         let bytes = self.opus.encode_float(&self.frame_buffer, &mut self.byte_buffer)?;
-        Ok(Bytes::copy_from_slice(&self.byte_buffer[..bytes]))
+        Ok(&self.byte_buffer[..bytes])
     }
 }
 
@@ -112,7 +112,7 @@ fn gen_header(channels: u8, sample_rate: u32) -> Bytes {
     buf.extend(b"OpusHead");                 // magic
     buf.extend(&[1]);                        // opus version
     buf.extend(&[channels]);                 // channels
-    buf.extend(&[0, 0]);                     // pre skip
+    buf.extend(&[0x38, 0x01]);               // pre skip
     buf.extend(&sample_rate.to_le_bytes());  // sample rate
     buf.extend(&[0, 0, 0]);                  // bruyh
 
@@ -122,7 +122,7 @@ fn gen_header(channels: u8, sample_rate: u32) -> Bytes {
 fn gen_tags() -> Bytes {
     let mut buf = Vec::with_capacity(30);
     let vendor = format!("quartz {}", std::env!("CARGO_PKG_VERSION"));
-    let comments = [format!("encoder={} libogg libopus", vendor)];
+    let comments = [format!("encoder={} libopus", vendor)];
 
     buf.extend(b"OpusTags");
     buf.extend(&(vendor.len() as u32).to_le_bytes());

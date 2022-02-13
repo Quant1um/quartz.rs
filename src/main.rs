@@ -1,12 +1,12 @@
 #![feature(new_uninit)]
 
 pub mod broadcast;
+pub mod static_files;
 
 #[macro_use]
 extern crate rocket;
 
-use rocket::{Rocket, Build, State, Request, Response};
-use rocket::fairing::AdHoc;
+use rocket::{Rocket, Build, State};
 use std::ops::Deref;
 use std::time::Duration;
 
@@ -27,13 +27,8 @@ impl broadcast::AudioSource for Tinnitus {
     }
 }
 
-#[get("/")]
-fn index() -> &'static str {
-    "Hello, world!"
-}
-
-#[get("/tinnitus")]
-fn tinnitus(broadcast: &State<broadcast::Broadcast>) -> broadcast::Broadcast {
+#[get("/stream")]
+fn stream(broadcast: &State<broadcast::Broadcast>) -> broadcast::Broadcast {
     broadcast.deref().clone()
 }
 
@@ -55,11 +50,6 @@ fn rocket() -> Rocket<Build> {
 
     rocket::build()
         .manage(b)
-        .attach(AdHoc::on_response("test", |_req: &Request<'_>, res: &mut Response<'_>| {
-            Box::pin(async move {
-                res.set_raw_header("testy", "very cool!");
-                res.remove_header("transfer-encoding");
-            })
-        }))
-        .mount("/", routes![index, tinnitus])
+        .mount("/", static_files::routes())
+        .mount("/", routes![stream])
 }

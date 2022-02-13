@@ -1,0 +1,155 @@
+@-webkit-keyframes spawn {
+    from { 
+        opacity: 0;
+        transform: translateX(-100px);
+    }
+
+    to { 
+        opacity: 1; 
+        transform: translateX(0px);
+    }
+}
+
+/* Standard syntax */
+@keyframes spawn {
+    from { 
+        opacity: 0;
+        transform: translateX(-100px);
+    }
+
+    to { 
+        opacity: 1; 
+        transform: translateX(0px);
+    }
+}
+
+
+html {
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    background: #444444;
+    color: #fefefe;
+
+    width: 100%;
+    height: 100%;
+
+    position: relative;
+}
+
+.background {
+    position: fixed; 
+    top: -50%; 
+    left: -50%; 
+    width: 200%; 
+    height: 200%;
+
+    pointer-events: none;
+    z-index: -1;
+}
+
+/*https://css-tricks.com/perfect-full-page-background-image*/
+.background-image {
+    position: absolute; 
+    top: 0; 
+    left: 0; 
+    right: 0; 
+    bottom: 0; 
+    margin: auto; 
+    min-width: 50%;
+    min-height: 50%;
+
+    pointer-events: none;
+    -webkit-transition: opacity 1s cubic-bezier(0.11, 0, 0.5, 0);
+    -moz-transition: opacity 1s cubic-bezier(0.11, 0, 0.5, 0);
+    -o-transition: opacity 1s cubic-bezier(0.11, 0, 0.5, 0);
+    transition: opacity 1s cubic-bezier(0.11, 0, 0.5, 0);
+
+    opacity: 0;
+
+    z-index: 0;
+}
+
+.current {
+    opacity: 1;
+}
+
+.container {
+    position: absolute;
+    left: 0;
+    
+    padding: 30px;
+    z-index: 1;
+
+    color: #ffffff;
+    font-family: 'Titillium Web', sans-serif;
+    font-weight: 600;
+    text-transform: uppercase;
+    text-shadow: 0 0 8px #000a;
+    line-height: 1;
+}
+
+.container.top {
+    top: 0;
+}
+
+.container.bottom {
+    bottom: 0;
+}
+
+.info {
+    display: inline-block;
+}
+
+.author.anim {
+    animation: spawn 0.7s ease;
+}
+
+.title.anim {
+    animation: spawn 1.2s ease;
+}
+
+.subtitle.anim {
+    animation: spawn 1s ease;
+}
+
+.author {
+    font-size: 2.5em;
+}
+
+.title {
+    font-size: 5.5em;
+}
+
+.subtitle {
+    font-size: 2.5em;
+    color: #999999;
+}
+
+.volume {
+    font-size: 2.5em;
+
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+    -khtml-user-select: none; /* Konqueror HTML */
+    -moz-user-select: none; /* Old versions of Firefox */
+    -ms-user-select: none; /* Internet Explorer/Edge */
+    user-select: none;
+}
+
+.listeners {
+    font-size: 1.5em;
+    color: #999999;
+}
+
+#volume {
+    cursor: pointer;
+}
+
+a {
+    text-decoration: none;
+    outline: none;
+    color: #efefef
+}

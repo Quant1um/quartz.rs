@@ -47,7 +47,7 @@ impl Channels {
         }
     }
 
-    pub fn count(&self) -> usize {
+    pub fn count(&self) -> u8 {
         match self {
             Channels::Mono => 1,
             Channels::Stereo => 2

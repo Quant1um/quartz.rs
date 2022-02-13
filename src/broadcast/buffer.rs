@@ -63,6 +63,10 @@ impl Receiver {
             notified.await;
         }
     }
+
+    pub fn receivers(&self) -> usize {
+        Arc::strong_count(&self.0) - 1
+    }
 }
 
 impl Clone for Receiver {

@@ -57,11 +57,11 @@ impl OpusEncoder {
         opus.set_vbr(options.vbr)?;
         opus.set_complexity(options.complexity)?;
 
-        let frame_size = options.frame_size.as_sample_count(options.sample_rate) * options.channels.count();
+        let frame_size = options.frame_size.as_sample_count(options.sample_rate) * options.channels.count() as usize;
 
         Ok(Self {
             opus,
-            channels: options.channels.count() as u8,
+            channels: options.channels.count(),
             sample_rate: options.sample_rate as u32,
             frame_buffer: vec![0.0; frame_size],
             byte_buffer: vec![0u8; BUFFER_SIZE]

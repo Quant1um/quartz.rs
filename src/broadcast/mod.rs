@@ -31,6 +31,10 @@ impl Broadcast {
         std::thread::spawn(move || { let _ = pump.run(source); });
         Ok(Self(handle))
     }
+
+    pub fn listeners(&self) -> usize {
+        self.0.receivers() - 1
+    }
 }
 
 use rocket::{response, Request};
@@ -47,7 +51,6 @@ impl<'r> response::Responder<'r, 'r> for Broadcast
             yield handle.header();
 
             for page in handle.buffered() {
-                println!("send buffered {:?}", page.duration);
                 yield page.data;
             }
 
@@ -58,6 +61,7 @@ impl<'r> response::Responder<'r, 'r> for Broadcast
 
         response::Response::build()
             .header(ContentType::new("audio", "ogg"))
+            .header(Header::new("Access-Control-Allow-Origin", "*"))
             .header(Header::new("Connection", "close"))
             .header(Header::new("Cache-Control", "no-cache, no-store"))
             .header(Header::new("Pragma", "no-cache"))

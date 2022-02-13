@@ -23,6 +23,10 @@ impl PumpHandle {
     pub fn header(&self) -> Bytes {
         self.header.clone()
     }
+
+    pub fn receivers(&self) -> usize {
+        self.receiver.receivers()
+    }
 }
 
 pub struct Pump {

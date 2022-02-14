@@ -72,6 +72,5 @@ pub struct Options {
     pub application: Application,
     pub buffer_size: Duration,
     pub complexity: u8,
-    pub frames_per_page: u32,
     pub vbr: bool
 }

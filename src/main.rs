@@ -43,7 +43,6 @@ fn rocket() -> Rocket<Build> {
         signal: broadcast::Signal::Music,
         bandwidth: broadcast::Bandwidth::Fullband,
         application: broadcast::Application::Audio,
-        frames_per_page: 10,
         complexity: 5,
         vbr: true
     }).unwrap();

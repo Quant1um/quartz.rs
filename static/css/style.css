@@ -139,13 +139,17 @@ body {
     user-select: none;
 }
 
+.volume {
+    cursor: pointer;
+}
+
+.volume:hover {
+    color: #dfdfdf;
+}
+
 .listeners {
     font-size: 1.5em;
     color: #999999;
-}
-
-#volume {
-    cursor: pointer;
 }
 
 a {

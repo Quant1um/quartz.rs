@@ -33,6 +33,7 @@ $(function() {
 
     (() => { //setting up the volume setting
         const elem = $("#volume");
+        const btn = $("#volume-btn");
         let volume = 0;
 
         const updateVolume = (v) => {
@@ -40,8 +41,8 @@ $(function() {
             elem.text(Math.floor(v * 100));
         };
 
-        elem.on("click", () => updateVolume(qaa.toggleMute()));
-        elem.on("wheel", (e) => {
+        btn.on("click", () => updateVolume(qaa.toggleMute()));
+        btn.on("wheel", (e) => {
             updateVolume(qaa.setVolume(volume -= e.originalEvent.deltaY * 0.0005))
         });
 

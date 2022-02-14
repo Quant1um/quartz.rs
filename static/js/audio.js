@@ -23,6 +23,10 @@ $(function() {
 
     window.qaa = {
         setVolume: (vol) => {
+            if (isMuted) {
+                return 0;
+            }
+
             isMuted = false;
             volume = vol;
 

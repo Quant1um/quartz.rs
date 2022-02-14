@@ -35,7 +35,7 @@ fn stream(broadcast: &State<broadcast::Broadcast>) -> broadcast::Broadcast {
 #[launch]
 fn rocket() -> Rocket<Build> {
     let b = broadcast::Broadcast::new(Tinnitus(Duration::from_nanos(0)), broadcast::Options {
-        buffer_size: Duration::from_secs(5),
+        buffer_size: Duration::from_secs(6),
         sample_rate: broadcast::SampleRate::Hz48000,
         frame_size: broadcast::FrameSize::Ms60,
         bit_rate: broadcast::Bitrate::Max,

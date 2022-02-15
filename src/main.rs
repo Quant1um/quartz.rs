@@ -1,6 +1,8 @@
 #![feature(new_uninit)]
 
+pub mod audio;
 pub mod broadcast;
+pub mod decoder;
 pub mod static_files;
 
 #[macro_use]
@@ -9,11 +11,19 @@ extern crate rocket;
 use rocket::{Rocket, Build, State};
 use std::ops::Deref;
 use std::time::Duration;
+use crate::audio::AudioFormat;
 
 pub struct Tinnitus(Duration);
 
 impl broadcast::AudioSource for Tinnitus {
     type Error = ();
+
+    fn format(&self) -> AudioFormat {
+        AudioFormat {
+            channels: 1,
+            sample_rate: 48000
+        }
+    }
 
     fn pull(&mut self, samples: &mut [f32]) -> Result<(), Self::Error> {
         let dps = Duration::from_nanos(1_000_000_000u64 / 48000);
@@ -36,10 +46,8 @@ fn stream(broadcast: &State<broadcast::Broadcast>) -> broadcast::Broadcast {
 fn rocket() -> Rocket<Build> {
     let b = broadcast::Broadcast::new(Tinnitus(Duration::from_nanos(0)), broadcast::Options {
         buffer_size: Duration::from_secs(6),
-        sample_rate: broadcast::SampleRate::Hz48000,
         frame_size: broadcast::FrameSize::Ms60,
         bit_rate: broadcast::Bitrate::Max,
-        channels: broadcast::Channels::Mono,
         signal: broadcast::Signal::Music,
         bandwidth: broadcast::Bandwidth::Fullband,
         application: broadcast::Application::Audio,

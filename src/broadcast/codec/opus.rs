@@ -1,7 +1,8 @@
 use audiopus;
 use thiserror::Error;
 use std::io::{self, Write};
-use super::{AudioSource, Options};
+use std::convert::TryFrom;
+use super::{AudioFormat, AudioSource, Options};
 
 #[derive(Error, Clone, Copy, Eq, PartialEq, Debug, Hash)]
 pub enum EncodeError<T: AudioSource> {
@@ -25,7 +26,10 @@ impl<T: AudioSource> From<audiopus::Error> for EncodeError<T> {
 #[derive(Error, Clone, Copy, Eq, PartialEq, Debug, Hash)]
 pub enum InitError {
     #[error("failed to initialize encoder: {0}")]
-    Opus(#[from] audiopus::ErrorCode)
+    Opus(#[from] audiopus::ErrorCode),
+
+    #[error("incompatible audio format: {0:?}")]
+    Format(AudioFormat)
 }
 
 //???????????????????????????????????????????
@@ -50,19 +54,26 @@ const BUFFER_SIZE: usize = 4000;
 
 impl OpusEncoder {
 
-    pub fn new(options: &Options) -> Result<Self, InitError> {
-        let mut opus = audiopus::coder::Encoder::new(options.sample_rate, options.channels.as_opus(), options.application)?;
+    pub fn new(format: AudioFormat, options: Options) -> Result<Self, InitError> {
+        let sample_rate = audiopus::SampleRate::try_from(format.sample_rate as i32)
+            .map_err(|_| InitError::Format(format))?;
+
+        let channels = audiopus::Channels::try_from(format.channels as i32)
+            .map_err(|_| InitError::Format(format))?;
+
+        let mut opus = audiopus::coder::Encoder::new(sample_rate, channels, options.application)?;
+
         opus.set_signal(options.signal)?;
         opus.set_bandwidth(options.bandwidth)?;
         opus.set_vbr(options.vbr)?;
         opus.set_complexity(options.complexity)?;
 
-        let frame_size = options.frame_size.as_sample_count(options.sample_rate) * options.channels.count() as usize;
+        let frame_size = options.frame_size.as_sample_count(format.sample_rate) as usize * format.channels as usize;
 
         Ok(Self {
             opus,
-            channels: options.channels.count(),
-            sample_rate: options.sample_rate as u32,
+            channels: format.channels,
+            sample_rate: format.sample_rate,
             frame_buffer: vec![0.0; frame_size],
             byte_buffer: vec![0u8; BUFFER_SIZE]
         })

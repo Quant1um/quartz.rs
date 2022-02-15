@@ -2,24 +2,16 @@ mod pump;
 mod codec;
 mod buffer;
 
+pub use crate::audio::{AudioFormat, AudioSource};
 pub use codec::{
     Options,
     Application,
-    SampleRate,
     Signal,
     Bandwidth,
     Bitrate,
-    Channels,
     FrameSize,
-
     InitError
 };
-
-pub trait AudioSource {
-    type Error;
-
-    fn pull(&mut self, samples: &mut [f32]) -> Result<(), Self::Error>;
-}
 
 #[derive(Clone)]
 pub struct Broadcast(pump::PumpHandle);
@@ -27,7 +19,7 @@ pub struct Broadcast(pump::PumpHandle);
 impl Broadcast {
 
     pub fn new(source: impl AudioSource + Send + 'static, options: Options) -> Result<Self, InitError> {
-        let (pump, handle) = pump::Pump::new(options)?;
+        let (pump, handle) = pump::Pump::new(source.format(), options)?;
         std::thread::spawn(move || { let _ = pump.run(source); });
         Ok(Self(handle))
     }

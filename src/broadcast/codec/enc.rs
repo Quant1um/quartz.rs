@@ -1,4 +1,4 @@
-use super::{AudioSource, Options, opus, ogg};
+use super::{AudioFormat, AudioSource, Options, opus, ogg};
 use std::ops::Deref;
 use std::time::Duration;
 use bytes::Bytes;
@@ -20,9 +20,9 @@ pub struct Encoder {
 
 impl Encoder {
 
-    pub fn new(options: &Options) -> Result<Self, InitError> {
+    pub fn new(format: AudioFormat, options: Options) -> Result<Self, InitError> {
         let mut ogg = ogg::OggStream::new();
-        let opus = opus::OpusEncoder::new(options)?;
+        let opus = opus::OpusEncoder::new(format, options)?;
         let header = mux_header(&mut ogg, &opus);
 
         Ok(Self {

@@ -1,7 +1,7 @@
 use std::time::Instant;
 use bytes::Bytes;
 use super::codec::{Page, Encoder, InitError, EncodeError};
-use super::{Options, AudioSource};
+use super::{Options, AudioFormat, AudioSource};
 use super::buffer::{Buffer, Receiver};
 
 #[derive(Clone)]
@@ -37,10 +37,10 @@ pub struct Pump {
 
 impl Pump {
 
-    pub fn new(options: Options) -> Result<(Self, PumpHandle), InitError> {
+    pub fn new(format: AudioFormat, options: Options) -> Result<(Self, PumpHandle), InitError> {
         let (buffer, receiver) = Buffer::new(options.buffer_size);
 
-        let encoder = Encoder::new(&options)?;
+        let encoder = Encoder::new(format, options)?;
         let header = encoder.header().clone();
 
         Ok((Self {

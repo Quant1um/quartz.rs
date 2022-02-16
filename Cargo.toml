@@ -11,6 +11,7 @@ audiopus = "0.3.0-rc.0"
 
 # decoding
 symphonia = { version = "0.5", features = [ "aac", "alac", "mp3", "isomp4" ] }
+samplerate = "0.2.4"
 
 # framework
 rocket = "0.5.0-rc.1"

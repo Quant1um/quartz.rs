@@ -9,44 +9,48 @@ pub mod static_files;
 #[macro_use]
 extern crate rocket;
 
-use crate::audio::{AudioFormat, AudioSource};
 use rocket::{Rocket, Build, State};
-use std::ops::Deref;
-use std::time::Duration;
-
-pub struct Tinnitus(Duration);
-
-impl AudioSource for Tinnitus {
-    type Error = ();
-
-    fn format(&self) -> AudioFormat {
-        AudioFormat {
-            channels: 1,
-            sample_rate: 48000
-        }
-    }
-
-    fn pull(&mut self, samples: &mut [f32]) -> Result<(), Self::Error> {
-        let dps = Duration::from_nanos(1_000_000_000u64 / 48000);
-
-        for s in samples {
-            self.0 += dps;
-            *s = f32::sin(self.0.as_secs_f32() * 2.0 * std::f32::consts::PI * 1000.0) * 0.2;
-        }
-
-        Ok(())
-    }
-}
+use crate::controller::Track;
 
 #[get("/stream")]
 fn stream(broadcast: &State<broadcast::Broadcast>) -> broadcast::Broadcast {
-    broadcast.deref().clone()
+    (*broadcast).clone()
 }
+
 
 #[launch]
 fn rocket() -> Rocket<Build> {
-    let b = broadcast::Broadcast::new(Tinnitus(Duration::from_nanos(0)), broadcast::Options {
-        buffer_size: Duration::from_secs(6),
+    struct VeryCoolSchedule;
+
+    impl controller::Schedule for VeryCoolSchedule {
+        fn next(&mut self) -> Track {
+            Track {
+                audio_url: "http://volosatoff.ru:8008/euro.opus".to_string(),
+                background_url: "epic fail".to_string(),
+                source_url: None,
+                title: None,
+                subtitle: None,
+                author: None
+            }
+        }
+    }
+
+    let schedule = VeryCoolSchedule;
+    let controller = controller::Controller::new(Box::new(schedule));
+    let multiplexer = multiplexer::Multiplexer::new(multiplexer::Options {
+        converter: multiplexer::ConverterType::SincMediumQuality,
+
+        format: audio::AudioFormat {
+            channels: 2,
+            sample_rate: 48000
+        },
+
+        buffer_size: 64 * 1024,
+        verify_decoding: true
+    }, controller.clone());
+
+    let broadcast = broadcast::Broadcast::new(multiplexer, broadcast::Options {
+        buffer_size: std::time::Duration::from_secs(6),
         frame_size: broadcast::FrameSize::Ms60,
         bit_rate: broadcast::Bitrate::Max,
         signal: broadcast::Signal::Music,
@@ -57,7 +61,8 @@ fn rocket() -> Rocket<Build> {
     }).unwrap();
 
     rocket::build()
-        .manage(b)
+        .manage(broadcast)
+        .manage(controller)
         .mount("/", static_files::routes())
         .mount("/", routes![stream])
 }

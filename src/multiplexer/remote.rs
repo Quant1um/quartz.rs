@@ -14,7 +14,7 @@ pub struct RemoteSource {
 impl RemoteSource {
 
     pub fn new(options: &Options, url: &str) -> Result<Self, Error> {
-        let stream = NetStream::open(&options.client, url)?;
+        let stream = NetStream::open(&Client::new(), url)?;
         let stream = MediaSourceStream::new(Box::new(stream), MediaSourceStreamOptions {
             buffer_len: options.buffer_size
         });

@@ -14,12 +14,10 @@ use symphonia::core::meta::MetadataOptions;
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub struct Options {
-    pub converter: ConverterType,
+    pub converter: samplerate::ConverterType,
     pub format: AudioFormat,
     pub verify: bool
 }
-
-pub type ConverterType = samplerate::ConverterType;
 
 pub struct AudioDecoder {
     reader: Box<dyn FormatReader>,

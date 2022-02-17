@@ -14,6 +14,6 @@ pub struct Track {
     pub author: Option<String>
 }
 
-pub trait Schedule {
+pub trait Schedule: Send + Sync {
     fn next(&mut self) -> Track;
 }

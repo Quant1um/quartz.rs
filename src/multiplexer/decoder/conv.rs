@@ -32,6 +32,8 @@ pub struct Converter {
     channels_out: u8
 }
 
+unsafe impl Send for Converter {}
+
 impl Converter {
 
     pub fn new(converter: samplerate::ConverterType, src: AudioFormat, dest: AudioFormat) -> Result<Self, samplerate::Error> {

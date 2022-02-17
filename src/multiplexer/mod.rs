@@ -3,7 +3,6 @@ mod decoder;
 
 use crate::controller::Controller;
 use crate::audio::{AudioSource, AudioFormat};
-use reqwest::blocking::Client;
 use remote::RemoteSource;
 use thiserror::Error;
 
@@ -19,10 +18,11 @@ pub enum Error {
     Converter(#[from] samplerate::Error)
 }
 
+pub type ConverterType = samplerate::ConverterType;
+
 #[derive(Clone, Debug)]
 pub struct Options {
-    pub client: Client,
-    pub converter: decoder::ConverterType,
+    pub converter: ConverterType,
     pub format: AudioFormat,
     pub buffer_size: usize,
     pub verify_decoding: bool
@@ -34,6 +34,18 @@ pub struct Multiplexer {
     source: Option<RemoteSource>
 }
 
+impl Multiplexer {
+
+    pub fn new(options: Options, controller: Controller) -> Self {
+        Self {
+            options,
+            controller,
+            source: None
+        }
+    }
+}
+
+//TODO do somthing with queue?
 impl AudioSource for Multiplexer {
     type Error = Error;
 
@@ -45,8 +57,9 @@ impl AudioSource for Multiplexer {
     fn pull(&mut self, samples: &mut [f32]) -> Result<(), Self::Error> {
         loop {
             if self.controller.changed() {
-                let queue = self.controller.read();
-                if let Some(track) = queue.current() {
+                let mut queue = self.controller.read();
+                let track = queue.next();
+                if let Some(track) =  {
                     if self.source.as_ref()
                         .map(|s| !s.check_url(&track.audio_url))
                         .unwrap_or(true) {
@@ -56,7 +69,13 @@ impl AudioSource for Multiplexer {
             }
 
             if let Some(source) = self.source.as_mut() {
-                return source.pull(samples)
+                match source.pull(samples) {
+                    Err(Error::Interrupt) => {
+                        self.source = None;
+                    },
+
+                    result => return result
+                }
             }
         }
     }

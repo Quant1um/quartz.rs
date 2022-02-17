@@ -1,8 +1,6 @@
 use super::{Schedule, Track};
 use std::collections::VecDeque;
 
-const MINIMUM_IN_QUEUE: usize = 2; // including preload
-
 pub struct Queue {
     schedule: Box<dyn Schedule>,
     queue: VecDeque<Track>
@@ -17,12 +15,12 @@ impl Queue {
         }
     }
 
-    pub fn skip(&mut self) -> Track {
-        while self.queue.len() < MINIMUM_IN_QUEUE + 1 {
+    pub fn next(&mut self) -> &Track {
+        if self.queue.is_empty() {
             self.queue.push_back(self.schedule.next());
         }
 
-        self.queue.pop_front().unwrap()
+        self.queue.front().unwrap()
     }
 
     pub fn remove(&mut self, id: usize) -> Option<Track> {

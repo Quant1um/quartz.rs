@@ -18,7 +18,7 @@ impl Controller {
         Self(Arc::new(Inner {
             queue: RwLock::new(Queue::new(schedule)),
             dirty: AtomicUsize::new(0)
-        }), 0)
+        }), 1)
     }
 
     pub fn changed(&mut self) -> bool {

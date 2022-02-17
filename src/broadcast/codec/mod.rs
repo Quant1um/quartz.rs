@@ -42,6 +42,7 @@ pub struct Options {
     pub signal: Signal,
     pub bandwidth: Bandwidth,
     pub application: Application,
+    pub max_page: Duration,
     pub buffer_size: Duration,
     pub complexity: u8,
     pub vbr: bool

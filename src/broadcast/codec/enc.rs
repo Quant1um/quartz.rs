@@ -15,19 +15,21 @@ pub type EncodeError<S> = opus::EncodeError<S>;
 pub struct Encoder {
     opus: opus::OpusEncoder,
     ogg: ogg::OggStream,
-    header: Bytes
+    header: Bytes,
+    max_page: Duration
 }
 
 impl Encoder {
 
-    pub fn new(format: AudioFormat, options: Options) -> Result<Self, InitError> {
+    pub fn new(format: AudioFormat, options: &Options) -> Result<Self, InitError> {
         let mut ogg = ogg::OggStream::new();
         let opus = opus::OpusEncoder::new(format, options)?;
         let header = mux_header(&mut ogg, &opus);
 
         Ok(Self {
             opus, ogg,
-            header
+            header,
+            max_page: options.max_page
         })
     }
 
@@ -35,15 +37,20 @@ impl Encoder {
         &self.header
     }
 
-    pub fn pull<S: AudioSource>(&mut self, source: &mut S) -> Result<Page, EncodeError<S>> {
+    pub fn pull<S: AudioSource>(&mut self, source: &mut S) -> Result<Page, EncodeError<S::Error>> {
         let mut samples = 0;
         let spp = self.opus.samples_per_page();
         let usps = 1_000_000_000u64 / (self.opus.sample_rate() as u64);
+        let max_smps = self.max_page.as_nanos() as u64 / usps;
 
         loop {
             let data = self.opus.pull_page(source)?;
             self.ogg.put(data, spp);
             samples += spp;
+
+            if samples > max_smps {
+                self.ogg.flush();
+            }
 
             let result = self.ogg.take();
 

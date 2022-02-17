@@ -2,7 +2,6 @@
 
 pub mod audio;
 pub mod broadcast;
-pub mod controller;
 pub mod multiplexer;
 pub mod static_files;
 
@@ -10,7 +9,6 @@ pub mod static_files;
 extern crate rocket;
 
 use rocket::{Rocket, Build, State};
-use crate::controller::Track;
 
 #[get("/stream")]
 fn stream(broadcast: &State<broadcast::Broadcast>) -> broadcast::Broadcast {
@@ -19,25 +17,8 @@ fn stream(broadcast: &State<broadcast::Broadcast>) -> broadcast::Broadcast {
 
 
 #[launch]
-fn rocket() -> Rocket<Build> {
-    struct VeryCoolSchedule;
-
-    impl controller::Schedule for VeryCoolSchedule {
-        fn next(&mut self) -> Track {
-            Track {
-                audio_url: "http://volosatoff.ru:8008/euro.opus".to_string(),
-                background_url: "epic fail".to_string(),
-                source_url: None,
-                title: None,
-                subtitle: None,
-                author: None
-            }
-        }
-    }
-
-    let schedule = VeryCoolSchedule;
-    let controller = controller::Controller::new(Box::new(schedule));
-    let multiplexer = multiplexer::Multiplexer::new(multiplexer::Options {
+async fn rocket() -> Rocket<Build> {
+    let (multiplexer, mut handle) = multiplexer::Multiplexer::new(multiplexer::Options {
         converter: multiplexer::ConverterType::SincMediumQuality,
 
         format: audio::AudioFormat {
@@ -47,10 +28,11 @@ fn rocket() -> Rocket<Build> {
 
         buffer_size: 64 * 1024,
         verify_decoding: true
-    }, controller.clone());
+    });
 
     let broadcast = broadcast::Broadcast::new(multiplexer, broadcast::Options {
-        buffer_size: std::time::Duration::from_secs(6),
+        max_page:  std::time::Duration::from_secs(1),
+        buffer_size: std::time::Duration::from_secs(0),
         frame_size: broadcast::FrameSize::Ms60,
         bit_rate: broadcast::Bitrate::Max,
         signal: broadcast::Signal::Music,
@@ -60,9 +42,10 @@ fn rocket() -> Rocket<Build> {
         vbr: true
     }).unwrap();
 
+    handle.set_url(Some("https://dl.dropboxusercontent.com/s/r48qj2ca1nqhm6w/My_Movie.mp3?dl=0".to_string())).await;
+
     rocket::build()
         .manage(broadcast)
-        .manage(controller)
         .mount("/", static_files::routes())
         .mount("/", routes![stream])
 }

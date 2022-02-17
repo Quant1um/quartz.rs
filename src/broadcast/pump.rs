@@ -37,7 +37,7 @@ pub struct Pump {
 
 impl Pump {
 
-    pub fn new(format: AudioFormat, options: Options) -> Result<(Self, PumpHandle), InitError> {
+    pub fn new(format: AudioFormat, options: &Options) -> Result<(Self, PumpHandle), InitError> {
         let (buffer, receiver) = Buffer::new(options.buffer_size);
 
         let encoder = Encoder::new(format, options)?;
@@ -53,7 +53,7 @@ impl Pump {
         }))
     }
 
-    pub fn run<S: AudioSource>(&mut self, mut source: S) -> Result<(), EncodeError<S>> {
+    pub fn run<S: AudioSource>(&mut self, mut source: S) -> Result<(), EncodeError<S::Error>> {
         while self.encode(&mut source)? {
             self.wait_for_next_frame();
         }
@@ -61,7 +61,7 @@ impl Pump {
         Ok(())
     }
 
-    fn encode<S: AudioSource>(&mut self, source: &mut S) -> Result<bool, EncodeError<S>> {
+    fn encode<S: AudioSource>(&mut self, source: &mut S) -> Result<bool, EncodeError<S::Error>> {
         let page = self.encoder.pull(source)?;
 
         self.next_pull += page.duration;
@@ -72,6 +72,7 @@ impl Pump {
 
     fn wait_for_next_frame(&mut self) {
         if let Some(sleep) = self.next_pull.checked_duration_since(Instant::now()) {
+            println!("pull next {:?}", sleep);
             spin_sleep::sleep(sleep);
         }
     }

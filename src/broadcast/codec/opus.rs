@@ -5,16 +5,16 @@ use std::convert::TryFrom;
 use super::{AudioFormat, AudioSource, Options};
 
 #[derive(Error, Clone, Copy, Eq, PartialEq, Debug, Hash)]
-pub enum EncodeError<T: AudioSource> {
+pub enum EncodeError<T> {
     #[error("failed to pull audio")]
-    Source(T::Error),
+    Source(T),
 
     #[error("failed to encode data: {0}")]
     Opus(audiopus::ErrorCode)
 }
 
 //???????????????????????????????????????????
-impl<T: AudioSource> From<audiopus::Error> for EncodeError<T> {
+impl<T> From<audiopus::Error> for EncodeError<T> {
     fn from(e: audiopus::Error) -> Self {
         match e {
             audiopus::Error::Opus(e) => EncodeError::Opus(e),
@@ -54,7 +54,7 @@ const BUFFER_SIZE: usize = 4000;
 
 impl OpusEncoder {
 
-    pub fn new(format: AudioFormat, options: Options) -> Result<Self, InitError> {
+    pub fn new(format: AudioFormat, options: &Options) -> Result<Self, InitError> {
         let sample_rate = audiopus::SampleRate::try_from(format.sample_rate as i32)
             .map_err(|_| InitError::Format(format))?;
 
@@ -116,7 +116,7 @@ impl OpusEncoder {
         Ok(())
     }
 
-    pub fn pull_page<S: AudioSource>(&mut self, source: &mut S) -> Result<&[u8], EncodeError<S>> {
+    pub fn pull_page<S: AudioSource>(&mut self, source: &mut S) -> Result<&[u8], EncodeError<S::Error>> {
         if let Err(e) = source.pull(&mut self.frame_buffer) {
             return Err(EncodeError::Source(e));
         }

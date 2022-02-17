@@ -7,8 +7,7 @@ use super::decoder::{AudioDecoder, Options as DecoderOptions};
 use super::{Options, Error};
 
 pub struct RemoteSource {
-    decoder: AudioDecoder,
-    url: String
+    decoder: AudioDecoder
 }
 
 impl RemoteSource {
@@ -20,17 +19,12 @@ impl RemoteSource {
         });
 
         Ok(Self {
-            url: url.to_string(),
             decoder: AudioDecoder::new(stream, &DecoderOptions {
                 converter: options.converter,
                 format: options.format,
                 verify: options.verify_decoding
             })?
         })
-    }
-
-    pub fn check_url(&self, url: &str) -> bool {
-        &self.url == url
     }
 }
 

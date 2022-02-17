@@ -84,8 +84,6 @@ struct Queue {
 impl Queue {
 
     fn new(max_length: Duration) -> Self {
-        assert!(max_length > Duration::from_secs(0), "length == 0");
-
         Self {
             queue: VecDeque::new(),
             length: Duration::from_nanos(0),
@@ -106,7 +104,6 @@ impl Queue {
 
         self.length += page.duration;
         self.queue.push_back(page);
-
     }
 }
 

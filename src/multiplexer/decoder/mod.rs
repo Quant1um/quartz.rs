@@ -84,10 +84,15 @@ impl AudioSource for AudioDecoder {
                 }
             }
 
-            let packet = self.reader.next_packet().map_err(|e| match e {
-                SymphoniaError::IoError(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => Error::Interrupt,
-                e => e.into()
-            })?;
+            let packet = match self.reader.next_packet() {
+                Err(SymphoniaError::IoError(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
+                    samples.fill(0.0);
+                    return Err(Error::Interrupt);
+                },
+
+                Ok(packet) => packet,
+                Err(e) => return Err(e.into())
+            };
 
             if packet.track_id() != self.track {
                 continue;

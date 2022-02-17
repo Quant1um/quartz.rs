@@ -1,10 +1,10 @@
 mod remote;
 mod decoder;
 
-use crate::controller::Controller;
 use crate::audio::{AudioSource, AudioFormat};
 use remote::RemoteSource;
 use thiserror::Error;
+use tokio::sync::mpsc::{Sender, Receiver, channel};
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -29,23 +29,45 @@ pub struct Options {
 }
 
 pub struct Multiplexer {
+    sig_switch: Receiver<Option<String>>,
+    sig_complete: Sender<()>,
+
     options: Options,
-    controller: Controller,
     source: Option<RemoteSource>
 }
 
 impl Multiplexer {
 
-    pub fn new(options: Options, controller: Controller) -> Self {
-        Self {
+    pub fn new(options: Options) -> (Self, Handle) {
+        let (sig_complete, handle_complete) = channel(1);
+        let (handle_switch, sig_switch) = channel(1);
+
+        let mux = Self {
+            sig_complete,
+            sig_switch,
             options,
-            controller,
             source: None
-        }
+        };
+
+        let hndl = Handle(handle_switch, handle_complete);
+
+        (mux, hndl)
     }
 }
 
-//TODO do somthing with queue?
+pub struct Handle(Sender<Option<String>>, Receiver<()>);
+
+impl Handle {
+
+    pub async fn wait_complete(&mut self) -> bool {
+        self.1.recv().await.is_some()
+    }
+
+    pub async fn set_url(&mut self, url: Option<String>) -> bool {
+        self.0.send(url).await.is_ok()
+    }
+}
+
 impl AudioSource for Multiplexer {
     type Error = Error;
 
@@ -53,28 +75,30 @@ impl AudioSource for Multiplexer {
         self.options.format
     }
 
-    //TODO fix decoder leftover
     fn pull(&mut self, samples: &mut [f32]) -> Result<(), Self::Error> {
         loop {
-            if self.controller.changed() {
-                let mut queue = self.controller.read();
-                let track = queue.next();
-                if let Some(track) =  {
-                    if self.source.as_ref()
-                        .map(|s| !s.check_url(&track.audio_url))
-                        .unwrap_or(true) {
-                        self.source = Some(RemoteSource::new(&self.options, &track.audio_url)?);
-                    }
-                }
+            match self.sig_switch.try_recv() {
+                Ok(Some(url)) => self.source = Some(RemoteSource::new(&self.options, &url)?),
+                Ok(None) => self.source = None,
+                Err(_) => {}
             }
 
-            if let Some(source) = self.source.as_mut() {
-                match source.pull(samples) {
-                    Err(Error::Interrupt) => {
-                        self.source = None;
-                    },
+            return match self.source.as_mut() {
+                Some(source) => {
+                    match source.pull(samples) {
+                        Err(Error::Interrupt) => {
+                            self.source = None;
+                            let _ = self.sig_complete.send(());
+                            continue;
+                        },
 
-                    result => return result
+                        result => result
+                    }
+                },
+
+                None => {
+                    samples.fill(0.0);
+                    Ok(())
                 }
             }
         }

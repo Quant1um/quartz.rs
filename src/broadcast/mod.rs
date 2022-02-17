@@ -18,9 +18,18 @@ pub struct Broadcast(pump::PumpHandle);
 
 impl Broadcast {
 
-    pub fn new(source: impl AudioSource + Send + 'static, options: Options) -> Result<Self, InitError> {
-        let (mut pump, handle) = pump::Pump::new(source.format(), options)?;
-        std::thread::spawn(move || { let _ = pump.run(source); });
+    pub fn new(mut source: impl AudioSource + Send + 'static, options: Options) -> Result<Self, InitError> {
+        let (mut pump, handle) = pump::Pump::new(source.format(), &options)?;
+
+        std::thread::spawn(move || {
+            loop {
+                match pump.run(&mut source) {
+                    Ok(_) => break,
+                    Err(e) => eprintln!("audio thread error: {:?}", e)
+                }
+            }
+        });
+
         Ok(Self(handle))
     }
 
@@ -41,13 +50,17 @@ impl<'r> response::Responder<'r, 'r> for Broadcast
 
         let stream = async_stream::stream! {
             yield handle.header();
+            println!("stream: header written");
 
-            for page in handle.buffered() {
-                yield page.data;
-            }
+            //for page in handle.buffered() {
+            //    yield page.data;
+            //}
+
+            //println!("stream: pre-buffered data written");
 
             loop {
                 yield handle.poll().await.data;
+                println!("stream: page");
             }
         };
 

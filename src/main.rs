@@ -2,20 +2,21 @@
 
 pub mod audio;
 pub mod broadcast;
-pub mod decoder;
+pub mod controller;
+pub mod multiplexer;
 pub mod static_files;
 
 #[macro_use]
 extern crate rocket;
 
+use crate::audio::{AudioFormat, AudioSource};
 use rocket::{Rocket, Build, State};
 use std::ops::Deref;
 use std::time::Duration;
-use crate::audio::AudioFormat;
 
 pub struct Tinnitus(Duration);
 
-impl broadcast::AudioSource for Tinnitus {
+impl AudioSource for Tinnitus {
     type Error = ();
 
     fn format(&self) -> AudioFormat {

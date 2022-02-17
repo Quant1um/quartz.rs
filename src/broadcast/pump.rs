@@ -53,7 +53,7 @@ impl Pump {
         }))
     }
 
-    pub fn run<S: AudioSource>(mut self, mut source: S) -> Result<(), EncodeError<S>> {
+    pub fn run<S: AudioSource>(&mut self, mut source: S) -> Result<(), EncodeError<S>> {
         while self.encode(&mut source)? {
             self.wait_for_next_frame();
         }

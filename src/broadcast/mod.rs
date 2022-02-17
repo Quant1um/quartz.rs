@@ -2,7 +2,7 @@ mod pump;
 mod codec;
 mod buffer;
 
-pub use crate::audio::{AudioFormat, AudioSource};
+use crate::audio::{AudioFormat, AudioSource};
 pub use codec::{
     Options,
     Application,
@@ -19,7 +19,7 @@ pub struct Broadcast(pump::PumpHandle);
 impl Broadcast {
 
     pub fn new(source: impl AudioSource + Send + 'static, options: Options) -> Result<Self, InitError> {
-        let (pump, handle) = pump::Pump::new(source.format(), options)?;
+        let (mut pump, handle) = pump::Pump::new(source.format(), options)?;
         std::thread::spawn(move || { let _ = pump.run(source); });
         Ok(Self(handle))
     }

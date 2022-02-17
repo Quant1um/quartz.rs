@@ -44,7 +44,9 @@ impl OggStream {
     pub fn new() -> Self {
         unsafe {
             let ogg = Box::into_raw(Box::<ogg_stream_state>::new_zeroed().assume_init());
-            ogg_stream_init(ogg, STREAM_ID);
+            if ogg_stream_init(ogg, STREAM_ID) != 0 {
+                panic!("ogg internal error")
+            } //error if -1
 
             Self {
                 ogg,
@@ -70,7 +72,9 @@ impl OggStream {
 
             self.counter = self.counter.wrapping_add(1);
 
-            ogg_stream_packetin(self.ogg, (&mut packet) as *mut _);
+            if ogg_stream_packetin(self.ogg, (&mut packet) as *mut _) != 0 {
+                panic!("ogg internal error")
+            }
         }
     }
 

@@ -79,12 +79,16 @@ impl OpusEncoder {
         })
     }
 
-    pub fn samples_per_page(&self) -> u64 {
-        (self.frame_buffer.len() / self.channels as usize) as u64
+    pub fn frame_size(&self) -> u64 {
+        self.frame_buffer.len() as u64
     }
 
     pub fn sample_rate(&self) -> u32 {
         self.sample_rate
+    }
+
+    pub fn channels(&self) -> u8 {
+        self.channels
     }
 
     pub fn write_header<W: Write>(&self, mut write: W) -> io::Result<()> {
@@ -119,6 +123,16 @@ impl OpusEncoder {
     pub fn pull_page<S: AudioSource>(&mut self, source: &mut S) -> Result<&[u8], EncodeError<S::Error>> {
         if let Err(e) = source.pull(&mut self.frame_buffer) {
             return Err(EncodeError::Source(e));
+        }
+
+        // TODO fix
+        // This is a hacky way to fix a bug where stream just stops loading on certain browsers (Firefox)
+        // if all the samples in a page (?) are zero.
+        // I guess it is something to do with interplay between OPUS encoding and Transfer-Encoding: Chunked header
+        // (because if i save stream data and replay it in Firefox as a local file then everything loads properly lol)
+        // I am just tired, I wasted several hours trying to fix it but now i give up
+        if self.frame_buffer[0] == 0.0 {
+            self.frame_buffer[0] = 0.0001;
         }
 
         let bytes = self.opus.encode_float(&self.frame_buffer, &mut self.byte_buffer)?;

@@ -22,6 +22,7 @@ pub struct Encoder {
     page_id: u64
 }
 
+//TODO fix zero-sample encoding failure
 impl Encoder {
 
     pub fn new(format: AudioFormat, options: &Options) -> Result<Self, InitError> {
@@ -43,8 +44,8 @@ impl Encoder {
 
     pub fn pull<S: AudioSource>(&mut self, source: &mut S) -> Result<Page, EncodeError<S::Error>> {
         let mut samples = 0;
-        let spp = self.opus.samples_per_page();
-        let usps = 1_000_000_000u64 / (self.opus.sample_rate() as u64);
+        let spp = self.opus.frame_size() / self.opus.channels() as u64;
+        let usps = 1_000_000_000u64 / self.opus.sample_rate() as u64;
         let max_smps = self.max_page.as_nanos() as u64 / usps;
 
         loop {
@@ -59,7 +60,7 @@ impl Encoder {
             let result = self.ogg.take();
 
             if !result.is_empty() {
-                self.page_id += 1;
+                self.page_id = self.page_id.wrapping_add(1);
 
                 return Ok(Page {
                     data: Bytes::copy_from_slice(result.deref()),

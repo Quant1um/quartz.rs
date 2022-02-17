@@ -50,17 +50,13 @@ impl<'r> response::Responder<'r, 'r> for Broadcast
 
         let stream = async_stream::stream! {
             yield handle.header();
-            println!("stream: header written");
 
             for page in handle.buffered() {
-                println!("stream: buffer page {:?} {}", page.duration, page.id);
                 yield page.data;
             }
 
             loop {
-                let page = handle.poll().await;
-                println!("stream: page {:?} {}", page.duration, page.id);
-                yield page.data;
+                yield handle.poll().await.data;
             }
         };
 

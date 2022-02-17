@@ -6,7 +6,8 @@ use bytes::Bytes;
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub struct Page {
     pub data: Bytes,
-    pub duration: Duration
+    pub duration: Duration,
+    pub id: u64
 }
 
 pub type InitError = opus::InitError;
@@ -16,7 +17,9 @@ pub struct Encoder {
     opus: opus::OpusEncoder,
     ogg: ogg::OggStream,
     header: Bytes,
-    max_page: Duration
+
+    max_page: Duration,
+    page_id: u64
 }
 
 impl Encoder {
@@ -29,7 +32,8 @@ impl Encoder {
         Ok(Self {
             opus, ogg,
             header,
-            max_page: options.max_page
+            max_page: options.max_page,
+            page_id: 0
         })
     }
 
@@ -55,9 +59,12 @@ impl Encoder {
             let result = self.ogg.take();
 
             if !result.is_empty() {
+                self.page_id += 1;
+
                 return Ok(Page {
                     data: Bytes::copy_from_slice(result.deref()),
-                    duration: Duration::from_nanos(samples * usps)
+                    duration: Duration::from_nanos(samples * usps),
+                    id: self.page_id
                 })
             }
         }

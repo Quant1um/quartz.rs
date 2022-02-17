@@ -52,15 +52,15 @@ impl<'r> response::Responder<'r, 'r> for Broadcast
             yield handle.header();
             println!("stream: header written");
 
-            //for page in handle.buffered() {
-            //    yield page.data;
-            //}
-
-            //println!("stream: pre-buffered data written");
+            for page in handle.buffered() {
+                println!("stream: buffer page {:?} {}", page.duration, page.id);
+                yield page.data;
+            }
 
             loop {
-                yield handle.poll().await.data;
-                println!("stream: page");
+                let page = handle.poll().await;
+                println!("stream: page {:?} {}", page.duration, page.id);
+                yield page.data;
             }
         };
 

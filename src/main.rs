@@ -31,8 +31,8 @@ async fn rocket() -> Rocket<Build> {
     });
 
     let broadcast = broadcast::Broadcast::new(multiplexer, broadcast::Options {
-        max_page:  std::time::Duration::from_secs(1),
-        buffer_size: std::time::Duration::from_secs(0),
+        max_page: std::time::Duration::from_millis(500),
+        buffer_size: std::time::Duration::from_secs(6),
         frame_size: broadcast::FrameSize::Ms60,
         bit_rate: broadcast::Bitrate::Max,
         signal: broadcast::Signal::Music,

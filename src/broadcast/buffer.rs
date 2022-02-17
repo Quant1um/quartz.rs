@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 use std::sync::Arc;
 use std::time::Duration;
 use super::codec::Page;
+use std::collections::vec_deque::Iter;
 
 pub struct Buffer(Arc<Shared>);
 pub struct Receiver(Arc<Shared>, usize);
@@ -40,9 +41,9 @@ impl Receiver {
     }
 
     pub fn buffered(&mut self) -> Vec<Page> {
-        let read = self.0.queue.read();
+        let queue = self.0.queue.read();
         self.1 = self.0.version.load(SeqCst);
-        read.queue.iter()
+        queue.iter()
             .map(|f| f.clone())
             .collect()
     }
@@ -54,8 +55,8 @@ impl Receiver {
             if version != self.1 {
                 self.1 = version;
 
-                let read = self.0.queue.read();
-                return read.queue.front()
+                let queue = self.0.queue.read();
+                return queue.latest()
                     .expect("broadcast buffer: no page after notify?")
                     .clone()
             }
@@ -104,6 +105,14 @@ impl Queue {
 
         self.length += page.duration;
         self.queue.push_back(page);
+    }
+
+    fn iter(&self) -> Iter<Page> {
+        self.queue.iter()
+    }
+
+    fn latest(&self) -> Option<&Page> {
+        self.queue.back()
     }
 }
 

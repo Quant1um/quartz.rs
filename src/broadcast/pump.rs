@@ -72,7 +72,6 @@ impl Pump {
 
     fn wait_for_next_frame(&mut self) {
         if let Some(sleep) = self.next_pull.checked_duration_since(Instant::now()) {
-            println!("pull next {:?}", sleep);
             spin_sleep::sleep(sleep);
         }
     }

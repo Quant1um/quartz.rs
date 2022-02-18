@@ -16,10 +16,9 @@ fn stream(broadcast: &State<broadcast::Broadcast>) -> broadcast::Broadcast {
 }
 
 #[launch]
-async fn rocket() -> Rocket<Build> {
-    let (multiplexer, mut handle) = multiplexer::Multiplexer::new(multiplexer::Options {
+fn rocket() -> Rocket<Build> {
+    let (mux_options, enc_options) = (multiplexer::Options {
         converter: multiplexer::ConverterType::SincMediumQuality,
-
         format: audio::AudioFormat {
             channels: 2,
             sample_rate: 48000
@@ -27,9 +26,7 @@ async fn rocket() -> Rocket<Build> {
 
         buffer_size: 64 * 1024,
         verify_decoding: true
-    });
-
-    let broadcast = broadcast::Broadcast::new(multiplexer, broadcast::Options {
+    }, broadcast::Options {
         max_page: std::time::Duration::from_secs(1),
         buffer_size: std::time::Duration::from_secs(6),
         frame_size: broadcast::FrameSize::Ms60,
@@ -39,9 +36,19 @@ async fn rocket() -> Rocket<Build> {
         application: broadcast::Application::Audio,
         complexity: 5,
         vbr: true
-    }).unwrap();
+    });
 
-    handle.set_url(Some("https://dl.dropboxusercontent.com/s/r48qj2ca1nqhm6w/My_Movie.mp3?dl=0".to_string())).await;
+    let (multiplexer, mut handle) = multiplexer::Multiplexer::new(mux_options);
+    let broadcast = broadcast::Broadcast::new(multiplexer, enc_options).unwrap();
+
+    tokio::spawn(async move {
+        loop {
+            handle.set_url(Some("https://dl.dropboxusercontent.com/s/r48qj2ca1nqhm6w/My_Movie.mp3?dl=0".to_string())).await;
+            if !handle.wait_complete().await {
+                break;
+            }
+        }
+    });
 
     rocket::build()
         .manage(broadcast)

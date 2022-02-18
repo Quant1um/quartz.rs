@@ -38,12 +38,12 @@ $(function() {
 
         const updateVolume = (v) => {
             volume = v;
-            elem.text(Math.floor(v * 100));
+            elem.text(Math.floor(v));
         };
 
         btn.on("click", () => updateVolume(qaa.toggleMute()));
         btn.on("wheel", (e) => {
-            updateVolume(qaa.setVolume(volume -= e.originalEvent.deltaY * 0.0005))
+            updateVolume(qaa.setVolume(volume -= Math.sign(e.originalEvent.deltaY) * 5))
         });
 
     })();

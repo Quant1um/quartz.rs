@@ -1,10 +1,10 @@
+use super::codec::Page;
 use tokio::sync::Notify;
 use parking_lot::RwLock;
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 use std::sync::Arc;
 use std::time::Duration;
-use super::codec::Page;
 use std::collections::vec_deque::Iter;
 
 pub struct Buffer(Arc<Shared>);
@@ -25,7 +25,7 @@ impl Buffer {
         }
 
         self.0.version.fetch_add(1, SeqCst);
-        self.0.notify.notify_waiters();
+        self.0.notify.notify_one();
     }
 
     pub fn receivers(&self) -> usize {

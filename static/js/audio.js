@@ -14,11 +14,13 @@ $(function() {
     };
 
     let isMuted = true;
-    let volume = parseFloat(window.localStorage.getItem("volume") || 1) || 1;
+    let volume = parseFloat(window.localStorage.getItem("volume") || 100) || 100;
 
     const setGain = (g) => {
         initialize();
-        return audio.volume = Math.max(0, Math.min(1, g));
+        let volume = Math.max(0, Math.min(100, g));
+        audio.volume = volume / 100;
+        return volume;
     }
 
     window.qaa = {

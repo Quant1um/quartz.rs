@@ -88,7 +88,7 @@ impl AudioSource for Multiplexer {
                     match source.pull(samples) {
                         Err(Error::Interrupt) => {
                             self.source = None;
-                            let _ = self.sig_complete.send(());
+                            let _ = self.sig_complete.try_send(());
                             continue;
                         },
 

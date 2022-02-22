@@ -1,7 +1,7 @@
 mod conv;
 
 use super::Error;
-use crate::audio::{AudioFormat, AudioSource};
+use crate::{AudioFormat, AudioSource};
 use conv::{Buffer, Converter};
 
 use symphonia::default::*;

@@ -1,7 +1,7 @@
 use std::time::Instant;
 use bytes::Bytes;
-use super::codec::{Page, Encoder, InitError, EncodeError};
-use super::{Options, AudioFormat, AudioSource};
+use crate::{AudioFormat, AudioSource};
+use super::codec::{Options, Page, Encoder, InitError, EncodeError};
 use super::buffer::{Buffer, Receiver};
 
 #[derive(Clone)]

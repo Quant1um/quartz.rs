@@ -2,7 +2,7 @@ mod pump;
 mod codec;
 mod buffer;
 
-use crate::audio::{AudioFormat, AudioSource};
+use crate::AudioSource;
 pub use codec::{
     Options,
     Application,
@@ -33,8 +33,8 @@ impl Broadcast {
         Ok(Self(handle))
     }
 
-    pub fn listeners(&self) -> usize {
-        self.0.receivers() - 1
+    pub fn count(&self) -> usize {
+        self.0.receivers()
     }
 }
 

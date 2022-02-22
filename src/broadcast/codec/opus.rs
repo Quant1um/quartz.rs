@@ -2,7 +2,8 @@ use audiopus;
 use thiserror::Error;
 use std::io::{self, Write};
 use std::convert::TryFrom;
-use super::{AudioFormat, AudioSource, Options};
+use crate::{AudioSource, AudioFormat};
+use super::Options;
 
 #[derive(Error, Clone, Copy, Eq, PartialEq, Debug, Hash)]
 pub enum EncodeError<T> {

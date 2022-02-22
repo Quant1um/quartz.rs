@@ -2,7 +2,7 @@ use reqwest::blocking::{Client, Response};
 use symphonia::core::io::{MediaSourceStream, MediaSource, MediaSourceStreamOptions};
 use std::io::{self, Seek, Read, SeekFrom};
 
-use crate::audio::{AudioSource, AudioFormat};
+use crate::{AudioSource, AudioFormat};
 use super::decoder::{AudioDecoder, Options as DecoderOptions};
 use super::{Options, Error};
 

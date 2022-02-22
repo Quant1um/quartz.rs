@@ -3,8 +3,6 @@ mod ogg;
 mod enc;
 
 pub use enc::*;
-
-use super::{AudioFormat, AudioSource};
 use std::time::Duration;
 
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Debug, Hash)]

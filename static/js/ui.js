@@ -31,6 +31,16 @@ $(function() {
         }
     }
 
+    const update = ({ title, subtitle, author, background, listeners }) => {
+        if(typeof title !== "undefined") $("#title").text(title || "");
+        if(typeof subtitle !== "undefined") $("#subtitle").text(subtitle || "");
+        if(typeof author !== "undefined") $("#author").text(author || "");
+        if(title || subtitle || author) startAnimation();
+
+        if(typeof listeners !== "undefined") $("#listeners").text(formatListeners(listeners));
+        if(typeof background !== "undefined") setBackground(background);
+    };
+
     (() => { //setting up the volume setting
         const elem = $("#volume");
         const btn = $("#volume-btn");
@@ -46,18 +56,13 @@ $(function() {
             updateVolume(qaa.setVolume(volume -= Math.sign(e.originalEvent.deltaY) * 5))
         });
 
+        //event stream
+        const events = new EventSource("/events");
+        events.onmessage = ({ data }) => {
+            const event = JSON.parse(data) || {};
+            update(event);
+        };
     })();
-    
 
-    window.qui = {
-        update: ({ title, subtitle, author, background, listeners }) => {
-            if(title) $("#title").text(title);
-            if(subtitle) $("#subtitle").text(subtitle);
-            if(author) $("#author").text(author);
-            if(title || subtitle || author) startAnimation();
-
-            if(listeners) $("#listeners").text(formatListeners(listeners));
-            if(background) setBackground(background);
-        }
-    };
+    window.qui = { update };
 });

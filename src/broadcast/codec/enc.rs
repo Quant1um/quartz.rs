@@ -1,4 +1,5 @@
-use super::{AudioFormat, AudioSource, Options, opus, ogg};
+use super::{Options, opus, ogg};
+use crate::{AudioFormat, AudioSource};
 use std::ops::Deref;
 use std::time::Duration;
 use bytes::Bytes;

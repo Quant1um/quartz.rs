@@ -1,4 +1,4 @@
-use crate::audio::AudioFormat;
+use crate::AudioFormat;
 use symphonia::core::audio::{AudioBufferRef, AudioBuffer, Signal};
 use symphonia::core::conv::IntoSample;
 use symphonia::core::sample::Sample;

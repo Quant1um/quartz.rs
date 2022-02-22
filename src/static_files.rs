@@ -14,19 +14,19 @@ macro_rules! import {
 }
 
 import!(index,      Html,       "/index.html", "/");
+import!(css_norm,   Css,        "/css/normalize.css");
+import!(css_style,  Css,        "/css/style.css");
 import!(js_jquery,  JavaScript, "/js/jquery.min.js");
 import!(js_audio,   JavaScript, "/js/audio.js");
 import!(js_ui,      JavaScript, "/js/ui.js");
-import!(css_norm,   Css,        "/css/normalize.css");
-import!(css_style,  Css,        "/css/style.css");
 
 pub fn routes() -> Vec<Route> {
     routes![
         index,
+        css_norm,
+        css_style,
         js_jquery,
         js_audio,
-        js_ui,
-        css_norm,
-        css_style
+        js_ui
     ]
 }

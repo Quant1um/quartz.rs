@@ -1,7 +1,7 @@
 mod remote;
 mod decoder;
 
-use crate::audio::{AudioSource, AudioFormat};
+use crate::{AudioSource, AudioFormat};
 use remote::RemoteSource;
 use thiserror::Error;
 use tokio::sync::mpsc::{Sender, Receiver, channel};

@@ -5,7 +5,7 @@ extern crate rocket;
 
 mod audio;
 pub mod broadcast;
-pub mod multiplexer;
+pub mod reader;
 pub mod schedule;
 pub mod static_files;
 pub mod events;
@@ -16,8 +16,8 @@ use rocket::{Rocket, Build, State};
 pub type EventStream = events::Join<Track, Listeners>;
 
 #[get("/stream")]
-fn rocket_stream(broadcast: &State<broadcast::Broadcast>) -> broadcast::Broadcast {
-    (*broadcast).clone()
+fn rocket_stream(broadcast: &State<broadcast::StreamManager>) -> broadcast::Stream {
+    broadcast.open()
 }
 
 #[get("/events")]
@@ -29,12 +29,14 @@ fn rocket_events(events: &State<EventStream>) -> EventStream {
 fn rocket() -> Rocket<Build> {
     let mut schedule = schedule::Test;
 
-    let (mux_options, enc_options) = (multiplexer::Options {
-        converter: multiplexer::ConverterType::SincMediumQuality,
-        format: audio::AudioFormat {
-            channels: 2,
-            sample_rate: 48000
-        },
+    let format = audio::AudioFormat {
+        channels: 2,
+        sample_rate: 48000
+    };
+
+    let (mux_options, enc_options) = (reader::Options {
+        converter: reader::ConverterType::SincMediumQuality,
+        format,
 
         buffer_size: 64 * 1024,
         verify_decoding: true
@@ -50,47 +52,58 @@ fn rocket() -> Rocket<Build> {
         vbr: true
     });
 
-    let (multiplexer, mut mux_handle) = multiplexer::Multiplexer::new(mux_options);
-    let broadcast = broadcast::Broadcast::new(multiplexer, enc_options).unwrap();
+    let (multiplexer, mut mux_handle) = reader::Multiplexer::new(format);
+    let streammgr = broadcast::run(multiplexer, enc_options).unwrap();
 
     let (event_track, mut event_track_handle) = events::EventStream::new();
     let (event_listeners, mut event_listeners_handle) = events::EventStream::new();
     let events: EventStream = event_track.join(event_listeners);
-    let listener_counter = broadcast.clone();
 
     // control thread
     tokio::spawn(async move {
         loop {
             let track = schedule::Schedule::next(&mut schedule);
-            mux_handle.set_url(Some(track.audio_url.clone())).await;
+            let stream = match reader::RemoteSource::new(&mux_options, &track.audio_url) {
+                Ok(x) => x,
+                Err(e) => {
+                    eprintln!("failed to open the track at {}: {}", track.audio_url, e);
+                    continue;
+                }
+            };
+
+            mux_handle.send(Some(Box::new(stream))).await;
             event_track_handle.send(track);
 
-            if !mux_handle.wait_complete().await {
+            if !mux_handle.wait().await {
                 break;
             }
         }
     });
 
     // listener count thread
-    tokio::spawn(async move {
-        loop {
-            let listeners = listener_counter.count() - 2; // minus two because two of the broadcast handles are used for service
-            let update = match event_listeners_handle.current() {
-                Some(data) => data.listeners != listeners,
-                None => true
-            };
+    tokio::spawn({
+        let streammgr = streammgr.clone();
 
-            if update {
-                event_listeners_handle.send(Listeners { listeners });
+        async move {
+            loop {
+                let listeners = streammgr.count();
+                let update = match event_listeners_handle.current() {
+                    Some(data) => data.listeners != listeners,
+                    None => true
+                };
+
+                if update {
+                    event_listeners_handle.send(Listeners { listeners });
+                }
+
+                tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
             }
-
-            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
         }
     });
 
     rocket::build()
         .manage(events)
-        .manage(broadcast)
+        .manage(streammgr)
         .mount("/", static_files::routes())
         .mount("/", routes![rocket_stream, rocket_events])
 }

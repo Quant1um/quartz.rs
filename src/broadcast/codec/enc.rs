@@ -4,29 +4,24 @@ use std::ops::Deref;
 use std::time::Duration;
 use bytes::Bytes;
 
+/// Encoded audio OGG page (w/ duration info)
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub struct Page {
     pub data: Bytes,
-    pub duration: Duration,
-    pub id: u64
+    pub duration: Duration
 }
-
-pub type InitError = opus::InitError;
-pub type EncodeError<S> = opus::EncodeError<S>;
 
 pub struct Encoder {
     opus: opus::OpusEncoder,
     ogg: ogg::OggStream,
     header: Bytes,
-
     max_page: Duration,
-    page_id: u64
 }
 
-//TODO fix zero-sample encoding failure
+/// Audio to OGG-OPUS encoder
 impl Encoder {
 
-    pub fn new(format: AudioFormat, options: &Options) -> Result<Self, InitError> {
+    pub fn new(format: AudioFormat, options: &Options) -> anyhow::Result<Self> {
         let mut ogg = ogg::OggStream::new();
         let opus = opus::OpusEncoder::new(format, options)?;
         let header = mux_header(&mut ogg, &opus);
@@ -35,7 +30,6 @@ impl Encoder {
             opus, ogg,
             header,
             max_page: options.max_page,
-            page_id: 0
         })
     }
 
@@ -43,31 +37,41 @@ impl Encoder {
         &self.header
     }
 
-    pub fn pull<S: AudioSource>(&mut self, source: &mut S) -> Result<Page, EncodeError<S::Error>> {
+    pub fn pull<S: AudioSource>(&mut self, mut source: S) -> anyhow::Result<Option<Page>> {
         let mut samples = 0;
-        let spp = self.opus.frame_size() / self.opus.channels() as u64;
-        let usps = 1_000_000_000u64 / self.opus.sample_rate() as u64;
+        let spp = self.opus.frame_size() / self.opus.format().channels as u64;
+        let usps = 1_000_000_000u64 / self.opus.format().sample_rate as u64;
         let max_smps = self.max_page.as_nanos() as u64 / usps;
 
         loop {
-            let data = self.opus.pull_page(source)?;
-            self.ogg.put(data, spp);
-            samples += spp;
+            let exit = match self.opus.pull_page(&mut source)? {
+                Some(page) => {
+                    self.ogg.put(page, spp);
+                    samples += spp;
 
-            if samples > max_smps {
-                self.ogg.flush();
-            }
+                    if samples >= max_smps {
+                        self.ogg.flush();
+                    }
+
+                    false
+                },
+
+                None => {
+                    self.ogg.flush();
+                    true
+                }
+            };
 
             let result = self.ogg.take();
-
             if !result.is_empty() {
-                self.page_id = self.page_id.wrapping_add(1);
-
-                return Ok(Page {
+                return Ok(Some(Page {
                     data: Bytes::copy_from_slice(result.deref()),
                     duration: Duration::from_nanos(samples * usps),
-                    id: self.page_id
-                })
+                }))
+            }
+
+            if exit {
+                return Ok(None);
             }
         }
     }

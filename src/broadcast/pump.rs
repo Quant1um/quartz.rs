@@ -1,78 +1,41 @@
 use std::time::Instant;
 use bytes::Bytes;
 use crate::{AudioFormat, AudioSource};
-use super::codec::{Options, Page, Encoder, InitError, EncodeError};
-use super::buffer::{Buffer, Receiver};
+use crate::broadcast::codec::Page;
+use super::codec::{Options, Encoder};
 
-#[derive(Clone)]
-pub struct PumpHandle {
-    receiver: Receiver,
-    header: Bytes
-}
-
-impl PumpHandle {
-
-    pub fn buffered(&mut self) -> Vec<Page> {
-        self.receiver.buffered()
-    }
-
-    pub async fn poll(&mut self) -> Page {
-        self.receiver.poll().await
-    }
-
-    pub fn header(&self) -> Bytes {
-        self.header.clone()
-    }
-
-    pub fn receivers(&self) -> usize {
-        self.receiver.receivers()
-    }
-}
-
+/// Audio pump. Used for getting pages from an encoder in a timely manner.
 pub struct Pump {
     encoder: Encoder,
-    buffer: Buffer,
     next_pull: Instant
 }
 
 impl Pump {
 
-    pub fn new(format: AudioFormat, options: &Options) -> Result<(Self, PumpHandle), InitError> {
-        let (buffer, receiver) = Buffer::new(options.buffer_size);
-
+    pub fn new(format: AudioFormat, options: &Options) -> anyhow::Result<Self> {
         let encoder = Encoder::new(format, options)?;
-        let header = encoder.header().clone();
 
-        Ok((Self {
-            buffer,
+        Ok(Self {
             encoder,
             next_pull: Instant::now()
-        }, PumpHandle {
-            receiver,
-            header
-        }))
+        })
     }
 
-    pub fn run<S: AudioSource>(&mut self, mut source: S) -> Result<(), EncodeError<S::Error>> {
-        while self.encode(&mut source)? {
-            self.wait_for_next_frame();
-        }
-
-        Ok(())
+    pub fn header(&self) -> &Bytes {
+        self.encoder.header()
     }
 
-    fn encode<S: AudioSource>(&mut self, source: &mut S) -> Result<bool, EncodeError<S::Error>> {
-        let page = self.encoder.pull(source)?;
-
-        self.next_pull += page.duration;
-        self.buffer.push(page);
-
-        Ok(self.buffer.receivers() > 0)
-    }
-
-    fn wait_for_next_frame(&mut self) {
+    pub fn run<S: AudioSource>(&mut self, source: S) -> anyhow::Result<Option<Page>> {
         if let Some(sleep) = self.next_pull.checked_duration_since(Instant::now()) {
             spin_sleep::sleep(sleep);
+        }
+
+        match self.encoder.pull(source)? {
+            None => Ok(None),
+            Some(page) => {
+                self.next_pull += page.duration;
+                Ok(Some(page))
+            }
         }
     }
 }

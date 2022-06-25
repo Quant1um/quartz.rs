@@ -1,66 +1,23 @@
 use audiopus;
-use thiserror::Error;
 use std::io::{self, Write};
 use std::convert::TryFrom;
 use crate::{AudioSource, AudioFormat};
 use super::Options;
 
-#[derive(Error, Clone, Copy, Eq, PartialEq, Debug, Hash)]
-pub enum EncodeError<T> {
-    #[error("failed to pull audio")]
-    Source(T),
-
-    #[error("failed to encode data: {0}")]
-    Opus(audiopus::ErrorCode)
-}
-
-//???????????????????????????????????????????
-impl<T> From<audiopus::Error> for EncodeError<T> {
-    fn from(e: audiopus::Error) -> Self {
-        match e {
-            audiopus::Error::Opus(e) => EncodeError::Opus(e),
-            _ => panic!("unexpected opus error: {}", e)
-        }
-    }
-}
-
-#[derive(Error, Clone, Copy, Eq, PartialEq, Debug, Hash)]
-pub enum InitError {
-    #[error("failed to initialize encoder: {0}")]
-    Opus(#[from] audiopus::ErrorCode),
-
-    #[error("incompatible audio format: {0:?}")]
-    Format(AudioFormat)
-}
-
-//???????????????????????????????????????????
-impl From<audiopus::Error> for InitError {
-    fn from(e: audiopus::Error) -> Self {
-        match e {
-            audiopus::Error::Opus(e) => InitError::Opus(e),
-            _ => panic!("unexpected opus error: {}", e)
-        }
-    }
-}
-
 pub struct OpusEncoder {
     opus: audiopus::coder::Encoder,
     frame_buffer: Vec<f32>,
     byte_buffer: Vec<u8>,
-    channels: u8,
-    sample_rate: u32
+    format: AudioFormat
 }
 
 const BUFFER_SIZE: usize = 4000;
 
 impl OpusEncoder {
 
-    pub fn new(format: AudioFormat, options: &Options) -> Result<Self, InitError> {
-        let sample_rate = audiopus::SampleRate::try_from(format.sample_rate as i32)
-            .map_err(|_| InitError::Format(format))?;
-
-        let channels = audiopus::Channels::try_from(format.channels as i32)
-            .map_err(|_| InitError::Format(format))?;
+    pub fn new(format: AudioFormat, options: &Options) -> anyhow::Result<Self> {
+        let sample_rate = audiopus::SampleRate::try_from(format.sample_rate as i32)?;
+        let channels = audiopus::Channels::try_from(format.channels as i32)?;
 
         let mut opus = audiopus::coder::Encoder::new(sample_rate, channels, options.application)?;
 
@@ -73,8 +30,7 @@ impl OpusEncoder {
 
         Ok(Self {
             opus,
-            channels: format.channels,
-            sample_rate: format.sample_rate,
+            format,
             frame_buffer: vec![0.0; frame_size],
             byte_buffer: vec![0u8; BUFFER_SIZE]
         })
@@ -84,21 +40,17 @@ impl OpusEncoder {
         self.frame_buffer.len() as u64
     }
 
-    pub fn sample_rate(&self) -> u32 {
-        self.sample_rate
-    }
-
-    pub fn channels(&self) -> u8 {
-        self.channels
+    pub fn format(&self) -> AudioFormat {
+        self.format
     }
 
     pub fn write_header<W: Write>(&self, mut write: W) -> io::Result<()> {
-        write.write(b"OpusHead")?;                      // magic
-        write.write(&[1])?;                             // opus version
-        write.write(&[self.channels])?;                 // channels
-        write.write(&[0x38, 0x01])?;                    // pre skip
-        write.write(&self.sample_rate.to_le_bytes())?;  // sample rate
-        write.write(&[0, 0, 0])?;                       // bruyh
+        write.write(b"OpusHead")?;                              // magic
+        write.write(&[1])?;                                     // opus version
+        write.write(&[self.format.channels])?;                  // channels
+        write.write(&[0x38, 0x01])?;                            // pre skip
+        write.write(&self.format.sample_rate.to_le_bytes())?;   // sample rate
+        write.write(&[0, 0, 0])?;                               // bruyh
 
         Ok(())
     }
@@ -121,9 +73,17 @@ impl OpusEncoder {
         Ok(())
     }
 
-    pub fn pull_page<S: AudioSource>(&mut self, source: &mut S) -> Result<&[u8], EncodeError<S::Error>> {
-        if let Err(e) = source.pull(&mut self.frame_buffer) {
-            return Err(EncodeError::Source(e));
+    pub fn pull_page<S: AudioSource>(&mut self, source: &mut S) -> anyhow::Result<Option<&[u8]>> {
+        let mut written = 0;
+
+        while written < self.frame_buffer.len() {
+            let samples = source.pull(&mut self.frame_buffer[written..])?;
+            written += samples;
+
+            if samples == 0 { //eof reached
+                self.frame_buffer[written..].fill(0.0);
+                break;
+            }
         }
 
         // TODO fix
@@ -137,6 +97,6 @@ impl OpusEncoder {
         }
 
         let bytes = self.opus.encode_float(&self.frame_buffer, &mut self.byte_buffer)?;
-        Ok(&self.byte_buffer[..bytes])
+        Ok(Some(&self.byte_buffer[..bytes]))
     }
 }

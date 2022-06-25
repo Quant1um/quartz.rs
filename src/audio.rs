@@ -1,21 +1,17 @@
 use std::fmt::Debug;
 use serde::{Serialize, Deserialize};
 
-pub trait AudioSource {
-    type Error: Debug;
-
+pub trait AudioSource: Send {
     fn format(&self) -> AudioFormat;
-    fn pull(&mut self, samples: &mut [f32]) -> Result<(), Self::Error>;
+    fn pull(&mut self, samples: &mut [f32]) -> anyhow::Result<usize>;
 }
 
 impl<'a, T: AudioSource> AudioSource for &'a mut T {
-    type Error = T::Error;
-
     fn format(&self) -> AudioFormat {
         T::format(self)
     }
 
-    fn pull(&mut self, samples: &mut [f32]) -> Result<(), Self::Error> {
+    fn pull(&mut self, samples: &mut [f32]) -> anyhow::Result<usize> {
         T::pull(self, samples)
     }
 }
@@ -41,3 +37,27 @@ pub struct Track {
 pub struct Listeners {
     pub listeners: usize
 }
+
+/* for testing purposes
+pub struct SineWave(AudioFormat, f32, f32);
+
+impl SineWave {
+    pub fn new(format: AudioFormat, freq: f32) -> Self {
+        Self(format, freq, 0.0)
+    }
+}
+
+impl AudioSource for SineWave {
+    fn format(&self) -> AudioFormat {
+        self.0
+    }
+
+    fn pull(&mut self, samples: &mut [f32]) -> anyhow::Result<usize> {
+        for s in samples.iter_mut() {
+            self.2 += self.1 / self.0.sample_rate as f32 * (2.0 * std::f32::consts::PI);
+            *s = f32::sin(self.2) * f32::sin(self.2 / 1000.0);
+        }
+
+        Ok(samples.len())
+    }
+}*/

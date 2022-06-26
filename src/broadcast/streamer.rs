@@ -1,9 +1,9 @@
 use std::collections::VecDeque;
-use std::time::{Duration, SystemTime};
 use std::collections::vec_deque::Iter;
 use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
+use std::time::Duration;
 use std::thread;
 
 use bytes::Bytes;

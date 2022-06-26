@@ -24,12 +24,22 @@ pub struct AudioFormat {
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Debug, Hash)]
 pub struct Track {
+
+    #[serde(default)]
     pub title: Option<String>,
+
+    #[serde(default)]
     pub subtitle: Option<String>,
+
+    #[serde(default)]
     pub author: Option<String>,
 
+    #[serde(default)]
     pub source_url: Option<String>,
+
+    #[serde(default)]
     pub background_url: Option<String>,
+    
     pub audio_url: String
 }
 

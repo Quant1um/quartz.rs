@@ -12,7 +12,7 @@ audiopus = "0.3.0-rc.0"
 # decoding
 symphonia = { version = "0.5", features = [ "aac", "alac", "mp3", "isomp4" ] }
 samplerate = "0.2.4"
-ureq = "2.4.0"
+ureq = { version = "2.4.0", features = ["json"] }
 url = "2.2.2"
 
 # framework
@@ -20,6 +20,7 @@ rocket = { version = "0.5.0-rc.1", features = ["json"] }
 tokio = "1.16.1" # god i FUCK*ING hate tokio
 tokio-stream = "0.1.9"
 async-stream = "0.3.2"
+async-trait = "0.1.56"
 
 # utils
 parking_lot = "0.12.0"
@@ -28,5 +29,8 @@ byteorder = "1.4.3"
 bytes = "1.1.0"
 anyhow = "1.0.58"
 either = "1.6.1"
+
+# queue
+rand = "0.8.5"
 
 serde = { version = "1.0.136", features = ["derive"] }

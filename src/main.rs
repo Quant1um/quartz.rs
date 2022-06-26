@@ -27,7 +27,14 @@ fn rocket_events(events: &State<EventStream>) -> EventStream {
 
 #[launch]
 fn rocket() -> Rocket<Build> {
-    let mut schedule = schedule::Test;
+    let tracks: Vec<Track> = ureq::get("https://dl.dropboxusercontent.com/s/fqby8xofqwa4cnw/tracks.json?dl=0")
+        .call()
+        .unwrap()
+        .into_json()
+        .unwrap();
+
+    let mut schedule = schedule::requeue::Requeue::new(tracks);
+    schedule.shuffle();
 
     let format = audio::AudioFormat {
         channels: 2,
@@ -62,7 +69,7 @@ fn rocket() -> Rocket<Build> {
     // control thread
     tokio::spawn(async move {
         loop {
-            let track = schedule::Schedule::next(&mut schedule);
+            let track = schedule::Schedule::next(&mut schedule).await;
             let stream = match reader::RemoteSource::new(&mux_options, &track.audio_url) {
                 Ok(x) => x,
                 Err(e) => {

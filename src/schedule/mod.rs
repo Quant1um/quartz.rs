@@ -1,13 +1,18 @@
-use crate::Track;
+pub mod requeue;
 
+use crate::Track;
+use async_trait::async_trait;
+
+#[async_trait]
 pub trait Schedule {
-    fn next(&mut self) -> Track;
+    async fn next(&mut self) -> Track;
 }
 
 pub struct Test;
 
+#[async_trait]
 impl Schedule for Test {
-    fn next(&mut self) -> Track {
+    async fn next(&mut self) -> Track {
         Track {
             title: Some("Very Cool Colorbass".to_string()),
             subtitle: None,

@@ -31,14 +31,14 @@ $(function() {
         }
     }
 
-    const update = ({ title, subtitle, author, background, listeners }) => {
+    const update = ({ title, subtitle, author, background_url, source_url, listeners }) => {
         if(typeof title !== "undefined") $("#title").text(title || "");
         if(typeof subtitle !== "undefined") $("#subtitle").text(subtitle || "");
         if(typeof author !== "undefined") $("#author").text(author || "");
         if(title || subtitle || author) startAnimation();
 
         if(typeof listeners !== "undefined") $("#listeners").text(formatListeners(listeners));
-        if(typeof background !== "undefined") setBackground(background);
+        if(typeof background_url !== "undefined") setBackground(background_url);
     };
 
     (() => { //setting up the volume setting
@@ -60,6 +60,7 @@ $(function() {
         const events = new EventSource("/events");
         events.onmessage = ({ data }) => {
             const event = JSON.parse(data) || {};
+            console.log(event)
             update(event);
         };
     })();

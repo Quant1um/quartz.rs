@@ -64,7 +64,7 @@ impl AudioSource for Multiplexer {
                 Err(_) => {}
             }
 
-            return match self.source.as_mut() {
+            match self.source.as_mut() {
                 Some(source) => {
                     if source.format() != self.format {
                         self.source = None;
@@ -72,7 +72,7 @@ impl AudioSource for Multiplexer {
                         return Err(anyhow::Error::msg("format mismatch"));
                     }
 
-                    match source.pull(samples) {
+                    return match source.pull(samples) {
                         Ok(0) => {
                             self.source = None;
                             self.sig_complete.send(()).unwrap();
@@ -90,9 +90,8 @@ impl AudioSource for Multiplexer {
                 },
 
                 None => {
-                    let len = samples.len().min(16);
-                    samples[..len].fill(0.0);
-                    Ok(len)
+                    std::thread::yield_now();
+                    continue;
                 }
             }
         }

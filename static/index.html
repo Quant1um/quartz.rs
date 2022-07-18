@@ -1,36 +1,55 @@
 <!DOCTYPE HTML>
 
-<html>
-    <head>
-        <meta charset="utf-8">
-        <title>Quartz Radio</title>
+<html lang="en-us">
 
-        <link href="https://fonts.googleapis.com/css?family=Quicksand:400&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css?family=Titillium+Web:600&display=swap" rel="stylesheet">
+<head>
+    <meta charset="utf-8">
+    <title>Quartz Radio</title>
 
-        <script src="js/jquery.min.js"></script>
-        <script src="js/audio.js"></script>
-        <script src="js/ui.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Quicksand:600&display=swap" rel="stylesheet">
 
-        <link rel="stylesheet" href="css/normalize.css">
-        <link rel="stylesheet" href="css/style.css">
-    </head>
+    <script src="js/jquery.min.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/events.js"></script>
 
-    <body>
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="background-container">
         <div class="background">
             <img class="background-image current" />
             <img class="background-image" />
         </div>
+    </div>
 
-        <div class="container top">
-            <span class="volume info" id="volume-btn">Volume: <span id="volume">0</span>%</span><br>
-            <span class="listeners info"><span id="listeners">No listeners</span></span>
+    <div class="container">
+        <div class="thumbnail paused anim-init animation d1" id="thumbnail">
+            <div class="thumbnail-tint"></div>
+            <div class="thumbnail-icon"></div>
+            <div class="thumbnail-volume-slider" id="volume-slider">
+                <div class="thumbnail-volume-handle" id="volume-handle"></div>
+            </div>
         </div>
 
-        <div class="container bottom">
-            <span class="author info animatable"><span id="author"></span></span><br>
-            <span class="title info animatable"><span id="title"></span></span>
-            <span class="subtitle info animatable"><span id="subtitle"></span></span>
+        <div class="info">
+            <div class="data anim-init animation d2">
+                <span class="data-listeners" id="listeners">No listeners</span>
+            </div>
+
+            <div class="data anim-init animation d3">
+                <a class="data-link-disabled" target="_blank" id="source">
+                    <span class="data-title" id="title">Quartz</span>
+                    <span class="data-subtitle" id="subtitle"></span>
+                </a>
+            </div>
+
+            <div class="data anim-init animation d4">
+                <span class="data-author" id="author">Radio</span>
+            </div>
         </div>
-    </body>
+    </div>
+</body>
 </html>

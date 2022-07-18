@@ -12,12 +12,12 @@ audiopus = "0.3.0-rc.0"
 # decoding
 symphonia = { version = "0.5", features = [ "aac", "alac", "mp3", "isomp4" ] }
 samplerate = "0.2.4"
-ureq = { version = "2.4.0", features = ["json"] }
+reqwest = { version = "0.11.11", features = ["json"] }
 url = "2.2.2"
 
 # framework
 rocket = { version = "0.5.0-rc.1", features = ["json"] }
-tokio = "1.16.1" # god i FUCK*ING hate tokio
+tokio = "1.16.1" # god i FUCK*ING hate tokio but i have no other choice
 tokio-stream = "0.1.9"
 async-stream = "0.3.2"
 async-trait = "0.1.56"

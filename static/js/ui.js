@@ -1,69 +1,124 @@
 $(function() {
     //info
     const startAnimation = () => {
-        const animatable = $(".animatable");
-    
-        animatable.addClass("anim");
-        animatable.on("animationend", function() {
-            $(this).removeClass("anim");
-        })
+        const animatable = $(".animation:not(.anim-playing)");
+
+        animatable.addClass("anim-playing");
+        animatable.removeClass("anim-init");
+        animatable.one("animationend", function() {
+            $(this).removeClass("anim-playing");
+        });
     };
 
-    const setBackground = (src) => {
-        const curr = $(".background-image.current");
-        const next = $(".background-image:not(.current)");
-    
-        next.attr("src", src);
-        curr.removeClass("current");
-        next.addClass("current");
-    };
+    const set = (key, value) => {
+        switch (key) {
+            case "title":
+                $("#title").text(value || "");
+                startAnimation();
+                break;
+            case "subtitle":
+                $("#subtitle").text(value || "");
+                startAnimation();
+                break;
+            case "author":
+                $("#author").text(value || "");
+                startAnimation();
+                break;
 
-    const formatListeners = (l) => {
-        switch(l) {
-            case 0: return "No listeners";
-            case 1: return "1 listener";
-            default: 
-                if (l < 1e3) return l + " listeners"; //as if people going to listen to this radio lol
-                if (l >= 1e3 && l < 1e6) return +(l / 1e3).toFixed(1) + "k listeners"; 
-                if (l >= 1e6 && l < 1e9) return +(l / 1e6).toFixed(1) + "m listeners";
-                if (l >= 1e9 && l < 1e12) return +(l / 1e9).toFixed(1) + "b listeners";
-                return +(l / 1e12).toFixed(1) + "t listeners";
+            case "listeners":
+            {
+                switch (value) {
+                    case 0:
+                        $("#listeners").text("No listeners");
+                        break;
+                    case 1:
+                        $("#listeners").text("1 listener");
+                        break;
+                    default:
+                        let text;
+
+                        if (value >= 1e9) text = (value / 1e9).toFixed(1) + "b listeners"; //LOL
+                        else if (value >= 1e6) text = (value / 1e6).toFixed(1) + "m listeners"; //lol
+                        else if (value >= 1e3) text = (value / 1e3).toFixed(1) + "k listeners";
+                        else text = value + " listeners";
+
+                        $("#listeners").text(text);
+                        break;
+                }
+
+                break;
+            }
+
+            case "source_url":
+            {
+                $("#source").attr("href", value);
+
+                if (value === null) {
+                    $("#source").addClass("data-link-disabled");
+                } else {
+                    $("#source").removeClass("data-link-disabled");
+                }
+
+                break;
+            }
+
+            case "background_url":
+            {
+                //thubnail
+                $("#thumbnail").css("background-image", `url(${value})`)
+
+                //background
+                const curr = $(".background-image.current");
+                const next = $(".background-image:not(.current)");
+
+                next.attr("src", value);
+                curr.removeClass("current");
+                next.addClass("current");
+
+                startAnimation();
+                break;
+            }
         }
-    }
-
-    const update = ({ title, subtitle, author, background_url, source_url, listeners }) => {
-        if(typeof title !== "undefined") $("#title").text(title || "");
-        if(typeof subtitle !== "undefined") $("#subtitle").text(subtitle || "");
-        if(typeof author !== "undefined") $("#author").text(author || "");
-        if(title || subtitle || author) startAnimation();
-
-        if(typeof listeners !== "undefined") $("#listeners").text(formatListeners(listeners));
-        if(typeof background_url !== "undefined") setBackground(background_url);
     };
 
-    (() => { //setting up the volume setting
-        const elem = $("#volume");
-        const btn = $("#volume-btn");
-        let volume = 0;
+    (() => {
+        const thumbnail = $("#thumbnail");
+        const volumeSlider = $("#volume-slider");
+        const volumeHandle = $("#volume-handle");
 
-        const updateVolume = (v) => {
-            volume = v;
-            elem.text(Math.floor(v));
+        const updateState = ([paused, volume]) => {
+            if (paused) {
+                thumbnail.addClass("paused");
+            } else {
+                thumbnail.removeClass("paused");
+            }
+
+            volumeHandle.css("width", `${volume}%`);
         };
 
-        btn.on("click", () => updateVolume(qaa.toggleMute()));
-        btn.on("wheel", (e) => {
-            updateVolume(qaa.setVolume(volume -= Math.sign(e.originalEvent.deltaY) * 5))
+        thumbnail.on("click", () => {
+            updateState(window.qaa.update(([paused, volume]) => [!paused, volume]));
         });
 
-        //event stream
-        const events = new EventSource("/events");
-        events.onmessage = ({ data }) => {
-            const event = JSON.parse(data) || {};
-            console.log(event)
-            update(event);
+        thumbnail.on("wheel", (e) => {
+            const delta = -2.5 * Math.sign(e.originalEvent.deltaY);
+            updateState(window.qaa.update(([paused, volume]) => [paused, volume + delta]));
+            e.preventDefault();
+        });
+
+        const processVolumeSlider = (e) => {
+            e.preventDefault();
+
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width;
+
+            console.log(x);
+
+            updateState(window.qaa.update(([paused, volume]) => [paused, x * 100]));
         };
+
+        volumeSlider.on("click", (e) => processVolumeSlider);
     })();
 
-    window.qui = { update };
+    window.qui = { set };
 });

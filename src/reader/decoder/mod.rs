@@ -28,7 +28,7 @@ pub struct AudioDecoder {
 
     format: AudioFormat,
     converter: Converter,
-    buffer: Option<Buffer>
+    buffer: Option<Buffer>,
 }
 
 impl AudioDecoder {
@@ -69,7 +69,7 @@ impl AudioDecoder {
             reader,
             decoder,
             converter,
-            format: options.format
+            format: options.format,
         })
     }
 }

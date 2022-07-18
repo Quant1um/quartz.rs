@@ -24,7 +24,7 @@ impl Requeue {
 
     pub fn shift(&mut self) {
         let next = self.queue.pop_front().expect("queue should not be empty");
-        let position= thread_rng().gen_range::<f32, _>(0.0..0.6);
+        let position = thread_rng().gen_range::<f32, _>(0.0..0.6);
         let index = (self.queue.len() as f32 * (1.0 - position)) as usize;
         self.queue.insert(index, next);
     }

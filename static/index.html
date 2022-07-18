@@ -27,10 +27,11 @@
 
     <div class="container">
         <div class="thumbnail paused anim-init animation d1" id="thumbnail">
-            <div class="thumbnail-tint"></div>
+            <div class="thumbnail-tint" id="control"></div>
             <div class="thumbnail-icon"></div>
-            <div class="thumbnail-volume-slider" id="volume-slider">
-                <div class="thumbnail-volume-handle" id="volume-handle"></div>
+            <div class="thumbnail-volume">
+                <input type="range" min="0" max="100" class="thumbnail-volume-slider" id="volume">
+                <div class="thumbnail-volume-bar" id="volume-bar"></div>
             </div>
         </div>
 

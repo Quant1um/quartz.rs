@@ -82,9 +82,10 @@ $(function() {
     };
 
     (() => {
+        const control = $("#control");
         const thumbnail = $("#thumbnail");
-        const volumeSlider = $("#volume-slider");
-        const volumeHandle = $("#volume-handle");
+        const volumeSlider = $("#volume");
+        const volumeBar = $("#volume-bar");
 
         const updateState = ([paused, volume]) => {
             if (paused) {
@@ -93,10 +94,10 @@ $(function() {
                 thumbnail.removeClass("paused");
             }
 
-            volumeHandle.css("width", `${volume}%`);
+            volumeBar.css("width", `${volume}%`);
         };
 
-        thumbnail.on("click", () => {
+        control.on("click", () => {
             updateState(window.qaa.update(([paused, volume]) => [!paused, volume]));
         });
 
@@ -106,18 +107,13 @@ $(function() {
             e.preventDefault();
         });
 
-        const processVolumeSlider = (e) => {
-            e.preventDefault();
+        volumeSlider.on("change", (e) => {
+            updateState(window.qaa.update(([paused, volume]) => [paused, e.target.value]));
+        });
 
-            const rect = e.currentTarget.getBoundingClientRect();
-            const x = (e.clientX - rect.left) / rect.width;
-
-            console.log(x);
-
-            updateState(window.qaa.update(([paused, volume]) => [paused, x * 100]));
-        };
-
-        volumeSlider.on("click", (e) => processVolumeSlider);
+        volumeSlider.on("input", (e) => {
+            updateState(window.qaa.update(([paused, volume]) => [paused, e.target.value]));
+        });
     })();
 
     window.qui = { set };

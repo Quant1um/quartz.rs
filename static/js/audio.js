@@ -11,6 +11,9 @@ $(function() {
         audio.load();
         audio.addEventListener("canplay", () => audio.play());
         audio.addEventListener("paused", () => audio.load());
+        audio.addEventListener("error", () => {
+            setTimeout(() => audio.load(), 5000);
+        });
     };
 
     let state = [

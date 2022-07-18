@@ -91,7 +91,7 @@ impl AudioSource for Multiplexer {
 
                 None => {
                     std::thread::yield_now();
-                    continue;
+                    return Ok(0);
                 }
             }
         }

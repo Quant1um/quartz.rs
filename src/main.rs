@@ -13,6 +13,11 @@ pub mod events;
 pub use audio::*;
 pub type EventStream = events::Join<Track, Listeners>;
 
+#[get("/status")]
+fn rocket_status() -> String {
+    "running".to_string()
+}
+
 #[get("/stream")]
 fn rocket_stream(broadcast: &rocket::State<broadcast::StreamManager>) -> broadcast::Stream {
     broadcast.open()
@@ -72,7 +77,7 @@ async fn main() -> Result<(), anyhow::Error> {
         .manage(events)
         .manage(streammgr)
         .mount("/", static_files::routes())
-        .mount("/", routes![rocket_stream, rocket_events])
+        .mount("/", routes![rocket_stream, rocket_events, rocket_status])
         .launch()
         .await?;
 

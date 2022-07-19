@@ -16,3 +16,13 @@ const init = () => {
 };
 
 $(init);
+
+
+// keep-alive
+$(() => {
+    setInterval(() => {
+        const request = new XMLHttpRequest();
+        request.open("GET", "/status", true);
+        request.send(null);
+    }, 60 * 10 * 1000);
+});

@@ -13,8 +13,6 @@ pub mod events;
 pub use audio::*;
 pub type EventStream = events::Join<Track, Listeners>;
 
-use std::str::FromStr;
-
 #[get("/stream")]
 fn rocket_stream(broadcast: &rocket::State<broadcast::StreamManager>) -> broadcast::Stream {
     broadcast.open()
@@ -70,17 +68,7 @@ async fn main() -> Result<(), anyhow::Error> {
     tokio::spawn(run_control_thread(schedule, mux_options, mux_handle, event_track_handle));
     tokio::spawn(run_listener_count_emitter_thread(streammgr.clone(), event_listeners_handle));
 
-    let config = rocket::Config {
-        port: std::env::var("PORT")
-            .ok()
-            .map(|f| u16::from_str(&f)
-                .expect("failed to parse PORT"))
-            .unwrap_or(8000),
-
-        ..rocket::Config::default()
-    };
-
-    rocket::custom(config)
+    rocket::build()
         .manage(events)
         .manage(streammgr)
         .mount("/", static_files::routes())

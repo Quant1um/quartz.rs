@@ -11,8 +11,9 @@ pub mod static_files;
 pub mod events;
 
 pub use audio::*;
-
 pub type EventStream = events::Join<Track, Listeners>;
+
+use std::str::FromStr;
 
 #[get("/stream")]
 fn rocket_stream(broadcast: &rocket::State<broadcast::StreamManager>) -> broadcast::Stream {
@@ -26,7 +27,9 @@ fn rocket_events(events: &rocket::State<EventStream>) -> EventStream {
 
 #[rocket::main]
 async fn main() -> Result<(), anyhow::Error> {
-    let tracks: Vec<Track> = reqwest::get("https://dl.dropboxusercontent.com/s/fqby8xofqwa4cnw/tracks.json?dl=0")
+    let _ = dotenv::dotenv();
+
+    let tracks: Vec<Track> = reqwest::get(std::env::var("TRACKLIST_URL").expect("no TRACKLIST_URL set"))
         .await?
         .json()
         .await?;
@@ -67,7 +70,17 @@ async fn main() -> Result<(), anyhow::Error> {
     tokio::spawn(run_control_thread(schedule, mux_options, mux_handle, event_track_handle));
     tokio::spawn(run_listener_count_emitter_thread(streammgr.clone(), event_listeners_handle));
 
-    rocket::build()
+    let config = rocket::Config {
+        port: std::env::var("PORT")
+            .ok()
+            .map(|f| u16::from_str(&f)
+                .expect("failed to parse PORT"))
+            .unwrap_or(8000),
+
+        ..rocket::Config::default()
+    };
+
+    rocket::custom(config)
         .manage(events)
         .manage(streammgr)
         .mount("/", static_files::routes())

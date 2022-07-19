@@ -1,3 +1,4 @@
+use std::os::raw::{c_long, c_uchar};
 use std::ops::Deref;
 use ogg_sys::{
     ogg_stream_state,
@@ -62,8 +63,8 @@ impl OggStream {
             self.samples = self.samples.wrapping_add(samples as i64);
 
             let mut packet = ogg_packet {
-                packet: data.as_ptr() as *mut u8,
-                bytes: data.len() as i32,
+                packet: data.as_ptr() as *mut c_uchar,
+                bytes: data.len() as c_long,
                 b_o_s: if self.counter == 0 { 1 } else { 0 },
                 e_o_s: 0,
                 granulepos: self.samples,
